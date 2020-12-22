@@ -1,8 +1,12 @@
 all:
-	gcc -Wall -c common.c
-	gcc -Wall client.c common.o -o client
-	gcc -Wall server.c common.o -o server
-	gcc -Wall server-mt.c common.o -lpthread -o server-mt
+	g++ -Wall -c common.c
+	g++ -Wall client.c common.o -o cliente
+	g++ -Wall server-mt.c common.o -lpthread -o servidor
+
+tester: $(TESTS)
+	g++ -Wall -I third-party test_common.cpp -o test_common.out
+	@./test_common.out
+	$(RM) test_*.out
 
 clean:
-	rm common.o client server server-mt
+	rm common.o cliente servidor
