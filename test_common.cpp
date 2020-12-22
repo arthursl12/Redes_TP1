@@ -46,19 +46,35 @@ TEST_CASE("strtolist"){
     CHECK(lr == l1);
 }
 
-// TEST_CASE("usedTags"){
-//     std::string msg = "bloodcyka noob hero #dota";
-//     std::set<std::string> l1 = {"#dota"};
-//     CHECK(usedTags(msg) == l1);
+TEST_CASE("usedTags"){
+    std::string msg = "bloodcyka noob hero #dota";
+    std::set<std::string> l1;
+    l1.insert("#dota");
+    std::set<std::string> lr;
+    usedtags(msg, lr);
+    CHECK(lr == l1);
 
-//     msg = "perdeu eh culpa do suporte #dota #overwatch";
-//     l1 = {"#dota","#overwatch"};
-//     CHECK(usedTags(msg) == l1);
+    msg = "perdeu eh culpa do suporte #dota #overwatch";
+    l1.clear();
+    l1.insert("#dota");
+    l1.insert("#overwatch");
+    lr.clear();
+    usedtags(msg, lr);
+    CHECK(lr == l1);
 
-//     msg = "perdeu #dota eh culpa do suporte #dota #overwatch";
-//     l1 = {"#dota","#overwatch"};
-//     CHECK(usedTags(msg) == l1);
+    msg = "perdeu #dota eh culpa do suporte #dota #overwatch";
+    l1.clear();
+    l1.insert("#dota");
+    l1.insert("#overwatch");
+    lr.clear();
+    usedtags(msg, lr);
+    CHECK(lr == l1);
+    CHECK(lr.size() == l1.size());
 
-//     msg = "perdeu eh culpa do suporte #dota#overwatch";
-//     CHECK(usedTags(msg).empty() == true);
-// }
+    msg = "perdeu eh culpa do suporte #dota#overwatch";
+    l1.clear();
+    lr.clear();
+    usedtags(msg, lr);
+    CHECK(lr == l1);
+    CHECK(lr.empty() == true);
+}

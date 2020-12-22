@@ -137,6 +137,24 @@ void strtolist(std::string& msg, std::list<std::string>& out){
     }
 }
 
-std::set<std::string> usedTags(const std::string msg){
+void usedtags(std::string& msg, std::set<std::string>& out){
+    std::list<std::string> tags;
+    strtolist(msg, tags);
+    out.clear();
 
+    for (auto it = tags.begin(); it != tags.end(); it++){
+        std::string str = *it; 
+        if (str[0] != '#'){
+            // Não é uma tag
+            continue;
+        }else if (str == "##kill"){
+            printf("Kill Command");
+        }else if (str.find('#',1) != std::string::npos){
+            // Uma tag inválida (dois símbolos #)
+            continue;
+        }else{
+            // Insere a tag no conjunto
+            out.insert(*it);
+        }
+    }
 }
