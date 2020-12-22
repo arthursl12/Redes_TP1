@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <list>
+#include <set>
+#include <string>
+#include <iostream>
 
 #include <arpa/inet.h>
 
@@ -99,4 +103,40 @@ int server_sockaddr_init(const char *proto, const char *portstr,
     } else {
         return -1;
     }
+}
+
+
+/*
+Transforma uma string em uma lista de palavras separadas por espaços (espaços
+múltiplos são considerados como um só)
+Adaptado de: 
+https://stackoverflow.com/questions/5888022/split-string-by-single-spaces
+*/
+void strtolist(std::string& msg, std::list<std::string>& out){
+    size_t pos = msg.find(' ');
+    size_t initialPos = 0;
+    out.clear();
+
+    // Quebra string em espaços
+    while(pos != std::string::npos) {
+        std::string subs = msg.substr(initialPos, pos - initialPos);
+        if (subs.size() > 1){
+            // Só adiciona à lista se for uma string e não um espaço
+            out.push_back(subs);
+        }
+            
+        initialPos = pos + 1;
+        pos = msg.find(' ',initialPos);
+    }
+
+    // Adicionar a última parte, se não for espaço
+    std::string subs = \
+        msg.substr(initialPos, std::min(pos, msg.size()) - initialPos + 1);
+    if (subs.size() > 1){
+        out.push_back(subs);
+    }
+}
+
+std::set<std::string> usedTags(const std::string msg){
+
 }
