@@ -198,3 +198,9 @@ void insert(Mapa& mp, std::string ip_user, std::string tag){
     }
 }
 
+void removeNewLine(char* str){
+    if (str[strlen(str)-1] == '\n'){
+        str[strlen(str)-1] = '\0';
+    }
+}
+

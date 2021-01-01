@@ -31,18 +31,27 @@ void* client_thread(void* data){
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
 
-    char buf[BUFSZ];
-    memset(buf, 0, BUFSZ);
-    size_t count = recv(cdata->csock, buf, BUFSZ-1, 0);
-    printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
+    while(1){
+        char buf[BUFSZ];
+        memset(buf, 0, BUFSZ);
+        size_t count = recv(cdata->csock, buf, BUFSZ-1, 0);
+        removeNewLine(buf);
+        printf("[msg] %s, %d bytes: \"%s\"\n", caddrstr, (int)count, buf);
 
-    sprintf(buf, "remote endpoint %.1000s\n", caddrstr);
-    count = send(cdata->csock, buf, strlen(buf)+1, 0);
-    if (count != strlen(buf)+1){
-        logexit("send");
+        // Copy buffer to comparison
+        if (strcmp(buf,"##quit") == 0){
+            // Command to exit;
+            printf("[log] %s requested to end connection\n", caddrstr);
+            break;
+        }
+
+        sprintf(buf, "Mensagem Enviada, %.1000s\n", caddrstr);
+        count = send(cdata->csock, buf, strlen(buf)+1, 0);
+        if (count != strlen(buf)+1){
+            logexit("send");
+        }
     }
     close(cdata->csock);
-    
     pthread_exit(EXIT_SUCCESS);
 }
 
@@ -80,6 +89,7 @@ int main(int argc, char* argv[]){
     addrtostr(addr, addrstr, BUFSZ);
     printf("bound to %s, waiting connections\n", addrstr);
 
+    std::vector<int> cSockS;
     while(1){
         struct sockaddr_storage cstorage;
         struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
@@ -98,7 +108,18 @@ int main(int argc, char* argv[]){
         memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
 
         pthread_t tid;
+        cSockS.push_back(csock);
+        printf("[log] size of vector of clients: %lu\n", cSockS.size());
         pthread_create(&tid, NULL, client_thread, cdata);
+
+        // for(int sock: cSockS){
+        //     char buf[BUFSZ];
+        //     sprintf(buf, "Ping!\n");
+        //     size_t count = send(sock, buf, strlen(buf)+1, 0);
+        //     if (count != strlen(buf)+1){
+        //         logexit("send");
+        //     }
+        // }
     }
     exit(EXIT_SUCCESS);
 }
