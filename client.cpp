@@ -28,46 +28,63 @@ int main(int argc, char* argv[]){
         usage(argc, argv);
     }
 
-    int s;
-    s = socket(storage.ss_family, SOCK_STREAM, 0);
-    if (s == -1) {
-        logexit("socket");
-    }
+
+    bool primeiro = true;
+    while(1){
+         int s;
+        s = socket(storage.ss_family, SOCK_STREAM, 0);
+        if (s == -1) {
+            logexit("socket");
+        }
 
 
-    struct sockaddr* addr = (struct sockaddr*)(&storage);
-    if (connect(s, addr, sizeof(storage)) != 0){
-        logexit("connect");
-    }
+        struct sockaddr* addr = (struct sockaddr*)(&storage);
+        if (connect(s, addr, sizeof(storage)) != 0){
+            logexit("connect");
+        }
 
-    char addrstr[BUFSZ];
-    addrtostr(addr, addrstr, BUFSZ);
+        char addrstr[BUFSZ];
+        addrtostr(addr, addrstr, BUFSZ);
 
-    printf("connected to %s\n", addrstr);
+        if (primeiro){
+            printf("connected to %s\n", addrstr);
+            primeiro = false;
+        }
 
-    char buf[BUFSZ];
-    memset(buf, 0, BUFSZ);
-    printf("mensagem> ");
-    fgets(buf, BUFSZ-1, stdin);
-    size_t count = send(s, buf, strlen(buf)+1, 0);
-    if (count != strlen(buf)+1){
-        logexit("send");
-    }
-    
-    memset(buf, 0, BUFSZ);
-    unsigned total = 0;
-    while(1) {
-        count = recv(s, buf + total, BUFSZ - total, 0);
-        if (count == 0) {
-            // Connection terminated
+
+        char buf[BUFSZ];
+        memset(buf, 0, BUFSZ);
+        printf("mensagem> ");
+        fgets(buf, BUFSZ-1, stdin);
+        size_t count = send(s, buf, strlen(buf)+1, 0);
+        if (count != strlen(buf)+1){
+            logexit("send");
+        }
+        
+        // Detect if request to exit with '##quit'
+        char cpybuf[BUFSZ];
+        strcpy(cpybuf,buf);
+        cpybuf[strlen(cpybuf)-1] = '\0';
+        if (strcmp(cpybuf,"##quit") == 0){
             break;
         }
-        total += count;
+
+        memset(buf, 0, BUFSZ);
+        unsigned total = 0;
+        while(1) {
+            count = recv(s, buf + total, BUFSZ - total, 0);
+            if (count == 0) {
+                // Connection terminated
+                break;
+            }
+            total += count;
+        }
+
+        // printf("received %d byted\n", total);
+        puts(buf);
+        close(s);
     }
-    close(s);
 
-    printf("received %d byted\n", total);
-    puts(buf);
-
+    
     exit(EXIT_SUCCESS);
 }   

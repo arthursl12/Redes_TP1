@@ -26,7 +26,7 @@ void* client_thread(void* data){
     struct client_data* cdata = (struct client_data*) data;
     struct sockaddr* caddr = (struct sockaddr*)(&cdata->storage);
 
-
+    
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
@@ -42,7 +42,7 @@ void* client_thread(void* data){
         logexit("send");
     }
     close(cdata->csock);
-
+    
     pthread_exit(EXIT_SUCCESS);
 }
 
