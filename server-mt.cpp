@@ -33,36 +33,39 @@ void* client_thread(void* data){
     printf("[log] connection from %s\n", caddrstr);
 
     while(1){
-        // Receive the message
+        // Receber a mensagem do cliente
         char buf[BUFSZ];
         memset(buf, 0, BUFSZ);
-        size_t count = recv(cdata->csock, buf, BUFSZ-1, 0);
+        int count = recv(cdata->csock, buf, BUFSZ-1, 0);
 
-        // No messages to receive, orderly shutdown from client
         if (count == 0){
+            // Sem mensagens a receber: cliente desligou
             printf("[log] %s closed connection\n", caddrstr);
             break;
+        }else{
+            // Erro no recv
+            logexit("recv (server)");
         }
         
-
-        // Check if all characters are valid
+        // Verifica se todos os caracteres da mensagem são válidos
         if (!validString(buf)){
             printf("[log] Invalid message from %s, closing connection\n", caddrstr);
             break;
         }
         
-        // Log the message received
+        // Log mensagem recebida
         removeNewLine(buf);
         printf("[msg] %s, %d bytes: \"%s\"\n", caddrstr, (int)count, buf);
 
-        // Check if it's the close connection command
+        // Verifica se a mensagem é o comando de fim da execução do cliente
         if (strcmp(buf,"##quit") == 0){
-            // Command to exit;
+            // Comando para fim da execução do cliente, podemos encerrar a 
+            // conexão dele no lado do servidor também
             printf("[log] %s requested to end connection\n", caddrstr);
             break;
         }
 
-        // Send a confirmation to sender
+        // Manda uma confirmação para o cliente
         sprintf(buf, "Message sent sucessfully, %.900s\n", caddrstr);
         count = send(cdata->csock, buf, strlen(buf)+1, 0);
         if (count != strlen(buf)+1){

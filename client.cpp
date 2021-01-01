@@ -24,28 +24,25 @@ void* send_msg_handler(void* data) {
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
 
-    // Message input
+    // Entrada da mensagem
     printf("message1> ");
     fflush(stdout);
     fgets(buf, BUFSZ-1, stdin);
 
     while(1) {
-        // Send the message
+        // Envia a mensagem
         size_t count = send(s, buf, strlen(buf)+1, 0);
         if (count != strlen(buf)+1){ logexit("send");}
 
-        // Copy buffer to comparison
+        // Copiar o buffer para o teste abaixo
         char cpybuf[BUFSZ];
         strcpy(cpybuf,buf);
         cpybuf[strlen(cpybuf)-1] = '\0';
         if (strcmp(cpybuf,"##quit") == 0){
-            // Command to exit;
+            // Comando para fechar o cliente
             break;
         }
 
-        // Message input
-        // printf("message3> ");
-        // fflush(stdout);
         fgets(buf, BUFSZ-1, stdin);
     }
     pthread_exit(EXIT_SUCCESS);
@@ -62,16 +59,17 @@ void* recv_msg_handler(void* data) {
         size_t count = recv(s, buf + total, BUFSZ - total, 0);
 
         if (count > 0) {
-            // Print message
+            // Imprime mensagem recebida do servidor
             removeNewLine(buf);
             puts(buf);
             printf("received %ld bytes\n", count);
-            // Print input text again
+
+            // Imprime texto de input novamente
             printf("message2> ");
             fflush(stdout);
         } else{
             // count == 0
-            printf("Server closed connection.\n");
+            printf("Servidor encerrou a conexão.\n");
             close(s);
             exit(EXIT_FAILURE);
             break;
@@ -92,13 +90,13 @@ int main(int argc, char* argv[]){
         usage(argc, argv);
     }
 
-    // Connect to server
+    // Conexão com o servidor
     int s = socket(storage.ss_family, SOCK_STREAM, 0);
     if (s == -1) { logexit("socket");}
     struct sockaddr* addr = (struct sockaddr*)(&storage);
     if (connect(s, addr, sizeof(storage)) != 0){ logexit("connect");}
     char addrstr[BUFSZ];       
-    addrtostr(addr, addrstr, BUFSZ);        // Get server IP to print
+    addrtostr(addr, addrstr, BUFSZ);        // Imprimir o IP do servidor
     printf("Sucessfully connected to %s\n", addrstr);
 
     pthread_t recv_msg_thread;
@@ -114,7 +112,9 @@ int main(int argc, char* argv[]){
     if (arg == NULL) { logexit("malloc");}
     *arg = s;
     pthread_create(&send_msg_thread, NULL, send_msg_handler, arg);
-    (void)pthread_join(send_msg_thread, NULL); // <--- will wait for thread
+    // Esperar a thread de enviar mensagem terminar, para que o programa espere
+    // que usuário digite
+    (void)pthread_join(send_msg_thread, NULL); 
 
     close(s);
     
