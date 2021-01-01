@@ -1,10 +1,11 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <list>
 #include <set>
+#include <cstring>
 #include <string>
+#include <iostream>
 #include <iostream>
 
 #include <arpa/inet.h>
@@ -202,5 +203,18 @@ void removeNewLine(char* str){
     if (str[strlen(str)-1] == '\n'){
         str[strlen(str)-1] = '\0';
     }
+}
+
+
+bool validString(std::string str){
+    char valids[181]  = "    ABCDEFGHIJKLMNOPQRSTUVWXYZ \
+                     abcdefghijklmnopqrstuvwxyz \
+                     0123456789 \
+                     ,.?!:;+-*/=@#$%()[]{} \
+                     \n\t\r\v\f";
+    // strspn retorna o tamanho do maior prefixo da primeira string que contém
+    // apenas caracteres da segunda
+    unsigned int i = std::strspn(str.c_str(), valids);
+    return (i == str.size());
 }
 

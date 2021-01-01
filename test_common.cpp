@@ -111,3 +111,18 @@ TEST_CASE("Mapa: insert"){
     CHECK(mp.at(ip4).size() == 1);
     CHECK(mp.at(ip4).at(0) == "#lol1");
 }
+
+TEST_CASE("validateString"){
+    CHECK(validString(" "));
+    CHECK(validString("\t"));
+    CHECK(validString(" 1234"));
+    CHECK(validString("\tt\nABCDF "));
+    CHECK(validString("#.90 #dota #anonovo\t\t,\t()"));
+    CHECK_FALSE(validString(" \\"));
+    CHECK(validString(",.?!:;+-*/=@#$%()[]{}"));
+    CHECK_FALSE(validString("_underscore_"));
+    CHECK_FALSE(validString("_u&nderscore_"));
+    CHECK_FALSE(validString("áéíóúiüöèàããõõôâêî"));
+    CHECK_FALSE(validString("çÇ"));
+    CHECK_FALSE(validString("¬~<>^´´`|"));
+}

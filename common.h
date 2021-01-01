@@ -28,3 +28,4 @@ void usedtags(std::string& msg, std::set<std::string>& out);
 
 void insert(Mapa& mp, std::string ip_user, std::string tag);
 void removeNewLine(char* str);
+bool validString(std::string str);

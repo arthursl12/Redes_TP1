@@ -11,6 +11,7 @@
 
 #define BUFSZ 1024
 
+
 void usage(int argc, char* argv[]){
     printf("usage: %s <v4|v6> <server_port>\n", argv[0]);
     printf("example: %s v4 51511\n", argv[0]);
@@ -32,20 +33,37 @@ void* client_thread(void* data){
     printf("[log] connection from %s\n", caddrstr);
 
     while(1){
+        // Receive the message
         char buf[BUFSZ];
         memset(buf, 0, BUFSZ);
         size_t count = recv(cdata->csock, buf, BUFSZ-1, 0);
+
+        // No messages to receive, orderly shutdown from client
+        if (count == 0){
+            printf("[log] %s closed connection\n", caddrstr);
+            break;
+        }
+        
+
+        // Check if all characters are valid
+        if (!validString(buf)){
+            printf("[log] Invalid message from %s, closing connection\n", caddrstr);
+            break;
+        }
+        
+        // Log the message received
         removeNewLine(buf);
         printf("[msg] %s, %d bytes: \"%s\"\n", caddrstr, (int)count, buf);
 
-        // Copy buffer to comparison
+        // Check if it's the close connection command
         if (strcmp(buf,"##quit") == 0){
             // Command to exit;
             printf("[log] %s requested to end connection\n", caddrstr);
             break;
         }
 
-        sprintf(buf, "Mensagem Enviada, %.1000s\n", caddrstr);
+        // Send a confirmation to sender
+        sprintf(buf, "Message sent sucessfully, %.900s\n", caddrstr);
         count = send(cdata->csock, buf, strlen(buf)+1, 0);
         if (count != strlen(buf)+1){
             logexit("send");
@@ -112,14 +130,15 @@ int main(int argc, char* argv[]){
         printf("[log] size of vector of clients: %lu\n", cSockS.size());
         pthread_create(&tid, NULL, client_thread, cdata);
 
-        // for(int sock: cSockS){
-        //     char buf[BUFSZ];
-        //     sprintf(buf, "Ping!\n");
-        //     size_t count = send(sock, buf, strlen(buf)+1, 0);
-        //     if (count != strlen(buf)+1){
-        //         logexit("send");
-        //     }
-        // }
+        for(int sock: cSockS){
+            printf("Sock: %i\n",sock);
+            // char buf[BUFSZ];
+            // sprintf(buf, "Ping!\n");
+            // size_t count = send(sock, buf, strlen(buf)+1, 0);
+            // if (count != strlen(buf)+1){
+            //     logexit("send");
+            // }
+        }
     }
     exit(EXIT_SUCCESS);
 }

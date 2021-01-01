@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -68,14 +69,14 @@ void* recv_msg_handler(void* data) {
             // Print input text again
             printf("message2> ");
             fflush(stdout);
-        } else if (count == 0) {
-            // Connection terminated
+        } else{
+            // count == 0
+            printf("Server closed connection.\n");
+            close(s);
+            exit(EXIT_FAILURE);
             break;
-        }else{
-
         }
         total += count;
-        
     }
     printf("received total %d bytes\n", total);
     pthread_exit(EXIT_SUCCESS);
