@@ -68,7 +68,7 @@ void* client_thread(void* data){
         // Manda uma confirmação para o cliente
         sprintf(buf, "Message sent sucessfully, %.900s\n", caddrstr);
         count = send(cdata->csock, buf, strlen(buf)+1, 0);
-        if (count != strlen(buf)+1){
+        if (count != (int) strlen(buf)+1){
             logexit("send");
         }
     }

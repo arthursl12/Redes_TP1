@@ -53,26 +53,27 @@ void* recv_msg_handler(void* data) {
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
     unsigned total = 0;
-    // printf("Listening to: %i\n", s);
 
     while (1) {
-        size_t count = recv(s, buf + total, BUFSZ - total, 0);
+        int count = recv(s, buf + total, BUFSZ - total, 0);
 
         if (count > 0) {
             // Imprime mensagem recebida do servidor
             removeNewLine(buf);
             puts(buf);
-            printf("received %ld bytes\n", count);
+            printf("received %i bytes\n", count);
 
             // Imprime texto de input novamente
             printf("message2> ");
             fflush(stdout);
-        } else{
-            // count == 0
+        }else if (count == 0){
             printf("Servidor encerrou a conexão.\n");
             close(s);
             exit(EXIT_FAILURE);
             break;
+        }else{
+            // count == -1
+            logexit("recv (client)");
         }
         total += count;
     }
@@ -117,8 +118,5 @@ int main(int argc, char* argv[]){
     (void)pthread_join(send_msg_thread, NULL); 
 
     close(s);
-    
-
-    
     exit(EXIT_SUCCESS);
 }   
