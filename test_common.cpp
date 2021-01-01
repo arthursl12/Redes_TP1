@@ -78,3 +78,36 @@ TEST_CASE("usedTags"){
     CHECK(lr == l1);
     CHECK(lr.empty() == true);
 }
+
+TEST_CASE("Mapa: insert"){
+    Mapa mp;
+    std::string ip1 = "::1";
+    std::string ip2 = "127.0.0.0";
+    std::string ip3 = "0.0.0.0";
+    std::string ip4 = "2001:db8:3c4d:15::1a2f:1a2b";
+
+    insert(mp, ip1, "#dota");
+    CHECK(mp.at(ip1).size() == 1);
+    CHECK(mp.at(ip1).at(0) == "#dota");
+
+    insert(mp, ip1, "#dota");
+    CHECK(mp.at(ip1).size() == 1);
+    CHECK(mp.at(ip1).at(0) == "#dota");
+
+    insert(mp, ip1, "#overwatch");
+    CHECK(mp.at(ip1).size() == 2);
+    CHECK(mp.at(ip1).at(0) == "#dota");
+    CHECK(mp.at(ip1).at(1) == "#overwatch");
+
+    insert(mp, ip2, "#lol");
+    CHECK(mp.at(ip2).size() == 1);
+    CHECK(mp.at(ip2).at(0) == "#lol");
+
+    insert(mp, ip3, "#lol");
+    CHECK(mp.at(ip3).size() == 1);
+    CHECK(mp.at(ip3).at(0) == "#lol");
+
+    insert(mp, ip4, "#lol1");
+    CHECK(mp.at(ip4).size() == 1);
+    CHECK(mp.at(ip4).at(0) == "#lol1");
+}

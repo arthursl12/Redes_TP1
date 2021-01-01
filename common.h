@@ -4,8 +4,14 @@
 #include <string>
 #include <set>
 #include <list>
+#include <vector>
+#include <map>
 
 #include <arpa/inet.h>
+
+typedef std::map<std::string, std::vector<std::string>> Mapa;
+typedef std::pair<std::string, std::vector<std::string>> Par;
+
 
 void logexit(const char *msg);
 
@@ -19,3 +25,5 @@ int server_sockaddr_init(const char *proto, const char *portstr,
 
 void strtolist(std::string& msg, std::list<std::string>& out);
 void usedtags(std::string& msg, std::set<std::string>& out);
+
+void insert(Mapa& mp, std::string ip_user, std::string tag);

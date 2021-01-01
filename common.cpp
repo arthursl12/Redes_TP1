@@ -9,6 +9,8 @@
 
 #include <arpa/inet.h>
 
+#include "common.h"
+
 void logexit(const char *msg){
     perror(msg);
     exit(EXIT_FAILURE);
@@ -137,6 +139,10 @@ void strtolist(std::string& msg, std::list<std::string>& out){
     }
 }
 
+/*
+Dada uma mensagem (string), retorna o conjunto de tags utilizadas (como é um 
+conjunto, não há tags repetidas no retorno)
+*/
 void usedtags(std::string& msg, std::set<std::string>& out){
     std::list<std::string> tags;
     strtolist(msg, tags);
@@ -158,3 +164,37 @@ void usedtags(std::string& msg, std::set<std::string>& out){
         }
     }
 }
+
+/*
+No mapa ("banco de dados"), insere a tag dentre as tags que o usuário com ip
+fornecido já se inscreveu 
+*/
+void insert(Mapa& mp, std::string ip_user, std::string tag){
+    // Procura cadastro desse usuário
+    auto it = mp.find(ip_user);
+    
+    if (it == mp.end()){
+        // Usuário não está presente, temos que criar o cadastro
+        std::vector<std::string> tags_subscribed;
+        tags_subscribed.push_back(tag);
+        Par p = std::make_pair<std::string&, std::vector<std::string>&>(ip_user, tags_subscribed);
+        mp.insert(p);
+    }else{
+        // Usuário já está presente, temos que atualizar as tags inscritas
+        std::vector<std::string> tags_subscribed = (*it).second;
+
+        // Verifica se já não está inscrito
+        auto it2 = tags_subscribed.begin();
+        for(; it2 != tags_subscribed.end(); it2++){
+            if(*it2 == tag)
+                break;
+        }
+
+        if(it2 == tags_subscribed.end()){
+            // Ainda não se inscreveu na tag, inscrevê-lo
+            it->second.push_back(tag);
+        }
+        // Se já estiver inscrito nada é feito
+    }
+}
+
