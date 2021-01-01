@@ -126,3 +126,99 @@ TEST_CASE("validateString"){
     CHECK_FALSE(validString("çÇ"));
     CHECK_FALSE(validString("¬~<>^´´`|"));
 }
+TEST_CASE("findNewLine"){
+    CHECK(findNewLine("") == -1);
+    CHECK(findNewLine("aaa") == -1);
+    CHECK(findNewLine("   ") == -1);
+    CHECK(findNewLine("\t\tA90") == -1);
+    CHECK(findNewLine("\n") == 0);
+    CHECK(findNewLine("ABCD\nABSDC") == 4);
+    CHECK(findNewLine("ABCD\nABSDC",4) == 4);
+    CHECK(findNewLine("ABCD\nABSDC",5) == -1);
+    CHECK(findNewLine("ABCD\nABSDC",20) == -1);
+}
+
+TEST_CASE("Multiple Messages one package"){
+    SUBCASE("Uma: caso comum"){
+        int BUFSZ = 1024;
+        char buf[BUFSZ] = "boa tarde #MaisUmDia\n";
+
+        int find = findNewLine(buf);
+        if (find != -1){
+            do{
+                // Log mensagem recebida
+                char cpy[BUFSZ];
+                strcpy(cpy, buf);
+                cpy[find] = '\0';
+
+                CHECK(std::string(cpy) == "boa tarde #MaisUmDia");
+
+                int oldfind = find;
+                find = findNewLine(buf,find+1);
+                CHECK(find == -1);
+            }while(find != -1);
+        }
+    }
+    SUBCASE("Duas"){
+        int BUFSZ = 1024;
+        char buf[BUFSZ] = "boa tarde #MaisUmDia\nbom almoço #DiarioAlimentar\n";
+
+        int i = 0;
+
+        int oldfind = -1;
+        int find = findNewLine(buf);
+        if (find != -1){
+            do{
+                // Log mensagem recebida
+                std::string bufStr = buf;
+                std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
+
+                if (i == 0){
+                    CHECK(cpyStr == "boa tarde #MaisUmDia");
+                    i++;
+                }else if (i == 1){
+                    CHECK(cpyStr == "bom almoço #DiarioAlimentar");
+                    i++;
+                }else{
+                    CHECK(false);
+                }
+                
+                oldfind = find;
+                find = findNewLine(buf,find+1);
+            }while(find != -1);
+        }
+    }
+    SUBCASE("Três"){
+        int BUFSZ = 1024;
+        char buf[BUFSZ] = "boa tarde #MaisUmDia\nbom almoço #DiarioAlimentar\nboa janta #DiarioAlimentar3\n";
+
+        int i = 0;
+
+        int oldfind = -1;
+        int find = findNewLine(buf);
+        if (find != -1){
+            do{
+                // Log mensagem recebida
+                std::string bufStr = buf;
+                std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
+
+                if (i == 0){
+                    CHECK(cpyStr == "boa tarde #MaisUmDia");
+                    i++;
+                }else if (i == 1){
+                    CHECK(cpyStr == "bom almoço #DiarioAlimentar");
+                    i++;
+                }else if (i == 2){
+                    CHECK(cpyStr == "boa janta #DiarioAlimentar3");
+                    i++;
+                }else{
+                    CHECK(false);
+                }
+                
+                oldfind = find;
+                find = findNewLine(buf,find+1);
+            }while(find != -1);
+        }
+    }
+    
+}

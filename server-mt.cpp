@@ -42,7 +42,7 @@ void* client_thread(void* data){
             // Sem mensagens a receber: cliente desligou
             printf("[log] %s closed connection\n", caddrstr);
             break;
-        }else{
+        }else if (count < 0){
             // Erro no recv
             logexit("recv (server)");
         }
@@ -53,23 +53,38 @@ void* client_thread(void* data){
             break;
         }
         
-        // Log mensagem recebida
-        removeNewLine(buf);
-        printf("[msg] %s, %d bytes: \"%s\"\n", caddrstr, (int)count, buf);
 
-        // Verifica se a mensagem é o comando de fim da execução do cliente
-        if (strcmp(buf,"##quit") == 0){
-            // Comando para fim da execução do cliente, podemos encerrar a 
-            // conexão dele no lado do servidor também
-            printf("[log] %s requested to end connection\n", caddrstr);
-            break;
-        }
+        int oldfind = -1;
+        int find = findNewLine(buf);
+        if (find != -1){
+            do{
+                // Pega só a mensagem entre '\n''s
+                std::string bufStr = buf;
+                std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
+                
+                // Log mensagem recebida
+                printf("[msg] %s, %d bytes: \"%s\"\n", \
+                        caddrstr, (int)count, cpyStr.c_str());
 
-        // Manda uma confirmação para o cliente
-        sprintf(buf, "Message sent sucessfully, %.900s\n", caddrstr);
-        count = send(cdata->csock, buf, strlen(buf)+1, 0);
-        if (count != (int) strlen(buf)+1){
-            logexit("send");
+                // Verifica se a mensagem é o comando de fim da execução do cliente
+                if (strcmp(cpyStr.c_str(),"##quit") == 0){
+                    // Comando para fim da execução do cliente, podemos encerrar a 
+                    // conexão dele no lado do servidor também
+                    printf("[log] %s requested to end connection\n", caddrstr);
+                    break;
+                }
+
+                // Manda uma confirmação para o cliente
+                char buf2[BUFSZ];
+                sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
+                count = send(cdata->csock, buf2, strlen(buf2)+1, 0);
+                if (count != (int) strlen(buf2)+1){
+                    logexit("send");
+                }
+                
+                oldfind = find;
+                find = findNewLine(buf,find+1);
+            }while(find != -1);
         }
     }
     close(cdata->csock);

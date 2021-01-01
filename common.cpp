@@ -218,3 +218,12 @@ bool validString(std::string str){
     return (i == str.size());
 }
 
+/*
+Retorna o índice do '\n' na string. Começa a busca por padrão do início da 
+string (0), mas pode começar de 'pos' se for fornecido. Caso não encontre, 
+retorna -1. Utiliza std::string::find.
+*/
+int findNewLine(std::string str, int pos){
+    std::string newStr = str;
+    return newStr.find('\n', pos);
+}
