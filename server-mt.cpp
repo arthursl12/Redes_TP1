@@ -24,14 +24,35 @@ struct client_data{
     struct sockaddr_storage storage;
 };
 
-void* client_thread(void* data){
-    struct client_data* cdata = (struct client_data*) data;
-    struct sockaddr* caddr = (struct sockaddr*)(&cdata->storage);
+struct cl_thd_args{
+    struct client_data* cdata;
+    std::vector<int>* cSockS;
+};
 
-    
+/*
+Remove o soquete do cliente fornecido do vector de soquetes de clientes
+*/
+void removeClient(std::vector<int>& cSockS, int cl){
+    // Procura o soquete do cliente fornecido
+    for(auto it = cSockS.begin(); it != cSockS.end(); it++){
+        if (*it == cl){
+            cSockS.erase(it);
+            break;
+        }
+    }
+}
+
+void* client_thread(void* arguments){
+    // Processa os argumentos recebidos
+    struct cl_thd_args* args = (struct cl_thd_args* )arguments;
+    struct client_data* cdata = (struct client_data*) args->cdata;
+    struct sockaddr* caddr = (struct sockaddr*)(&cdata->storage);
+    std::vector<int>* cSockS = (std::vector<int>*) args->cSockS;
+
+    // Imprime que a conexão teve sucesso
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
-    printf("[log] connection from %s\n", caddrstr);
+    printf("[log] Connection from %s\n", caddrstr);
 
     bool connected = true;
     while(connected){
@@ -50,6 +71,7 @@ void* client_thread(void* data){
                 // Sem mensagens a receber: cliente desligou
                 printf("[log] %s closed connection\n", caddrstr);
                 connected = false;
+                removeClient(*cSockS, cdata->csock);
                 break;
             }else if (count < 0){
                 // Erro no recv
@@ -59,6 +81,7 @@ void* client_thread(void* data){
             // Verifica se todos os caracteres da mensagem são válidos
             if (!validString(rec)){
                 printf("[log] Invalid message from %s, closing connection\n", caddrstr);
+                removeClient(*cSockS, cdata->csock);
                 break;
             }
 
@@ -73,9 +96,9 @@ void* client_thread(void* data){
             std::cout.setf(std::ios::boolalpha);
             std::cout << "[log] Found newline: " << newLineFound << std::endl;
         }
-        std::cout << "[log] Message received" << std::endl;
         if(!connected){ break;}
-
+        std::cout << "[log] Message received" << std::endl;
+        
         // Pós-processamento: caso mais de uma mensagem tenha chegado num mesmo
         // pacote
         int oldfind = -1;
@@ -95,6 +118,7 @@ void* client_thread(void* data){
                     // Comando para fim da execução do cliente, podemos encerrar a 
                     // conexão dele no lado do servidor também
                     printf("[log] %s requested to end connection\n", caddrstr);
+                    removeClient(*cSockS, cdata->csock);
                     break;
                 }
 
@@ -111,6 +135,7 @@ void* client_thread(void* data){
             }while(find != -1);
         }
     }
+    removeClient(*cSockS, cdata->csock);
     close(cdata->csock);
     pthread_exit(EXIT_SUCCESS);
 }
@@ -179,17 +204,25 @@ int main(int argc, char* argv[]){
             logexit("accept");
         }
 
-        struct client_data *cdata = (struct client_data*) malloc(sizeof(*cdata));
-        if (!cdata){
+        // struct client_data *cdata = (struct client_data*) malloc(sizeof(*cdata));
+        // if (!cdata){
+        //     logexit("malloc");
+        // }
+
+        // Argumentos para a thread do cliente
+        struct cl_thd_args *args = (struct cl_thd_args*) malloc(sizeof(*args));
+        if (!args){
             logexit("malloc");
         }
-        cdata->csock = csock;
-        memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
+        struct client_data *cdata = (struct client_data*) malloc(sizeof(*cdata));
+        args->cdata = cdata;
+        args->cdata->csock = csock;
+        memcpy(&(args->cdata->storage), &cstorage, sizeof(cstorage));
+        args->cSockS = &cSockS;
 
         pthread_t tid;
         cSockS.push_back(csock);
-        printf("[log] size of vector of clients: %lu\n", cSockS.size());
-        pthread_create(&tid, NULL, client_thread, cdata);
+        pthread_create(&tid, NULL, client_thread, args);
         
         
     }
