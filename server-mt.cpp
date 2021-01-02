@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -32,34 +33,54 @@ void* client_thread(void* data){
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
 
-    while(1){
+    bool connected = true;
+    while(connected){
         // Receber a mensagem do cliente
-        char buf[BUFSZ];
-        memset(buf, 0, BUFSZ);
-        int count = recv(cdata->csock, buf, BUFSZ-1, 0);
+        char rec[BUFSZ];
+        memset(rec, 0, BUFSZ);
 
-        if (count == 0){
-            // Sem mensagens a receber: cliente desligou
-            printf("[log] %s closed connection\n", caddrstr);
-            break;
-        }else if (count < 0){
-            // Erro no recv
-            logexit("recv (server)");
-        }
-        
-        // Verifica se todos os caracteres da mensagem são válidos
-        if (!validString(buf)){
-            printf("[log] Invalid message from %s, closing connection\n", caddrstr);
-            break;
-        }
-        
+        std::string recStr = "";
 
+        int count = 0;
+        bool newLineFound = false;
+        while(!newLineFound){
+            count = recv(cdata->csock, rec, BUFSZ-1, 0);
+
+            if (count == 0){
+                // Sem mensagens a receber: cliente desligou
+                printf("[log] %s closed connection\n", caddrstr);
+                connected = false;
+                break;
+            }else if (count < 0){
+                // Erro no recv
+                logexit("recv (server)");
+            }
+            
+            // Verifica se todos os caracteres da mensagem são válidos
+            if (!validString(rec)){
+                printf("[log] Invalid message from %s, closing connection\n", caddrstr);
+                break;
+            }
+
+
+            recStr += rec;
+            std::cout << "[log] Partial string " << recStr << std::endl;
+
+            int find = findNewLine(rec);
+            newLineFound = (find != -1) ? true : false;
+            std::cout << "[log] Newline at index: " << find << std::endl;
+            std::cout.setf(std::ios::boolalpha);
+            std::cout << "[log] Found newline: " << newLineFound << std::endl;
+        }
+        std::cout << "[log] Message received" << std::endl;
+        
+        if(!connected){ break;}
         int oldfind = -1;
-        int find = findNewLine(buf);
+        int find = findNewLine(recStr.c_str());
         if (find != -1){
             do{
                 // Pega só a mensagem entre '\n''s
-                std::string bufStr = buf;
+                std::string bufStr = recStr;
                 std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
                 
                 // Log mensagem recebida
@@ -83,7 +104,7 @@ void* client_thread(void* data){
                 }
                 
                 oldfind = find;
-                find = findNewLine(buf,find+1);
+                find = findNewLine(recStr,find+1);
             }while(find != -1);
         }
     }
