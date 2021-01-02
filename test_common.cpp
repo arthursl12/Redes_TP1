@@ -81,35 +81,111 @@ TEST_CASE("usedTags"){
 
 TEST_CASE("Mapa: insert"){
     Mapa mp;
-    std::string ip1 = "::1";
-    std::string ip2 = "127.0.0.0";
-    std::string ip3 = "0.0.0.0";
-    std::string ip4 = "2001:db8:3c4d:15::1a2f:1a2b";
+    std::string ip1 = "::1 2001";
 
-    insert(mp, ip1, "#dota");
+    CHECK(insert(mp, ip1, "#dota"));
     CHECK(mp.at(ip1).size() == 1);
     CHECK(mp.at(ip1).at(0) == "#dota");
 
-    insert(mp, ip1, "#dota");
+    CHECK_FALSE(insert(mp, ip1, "#dota"));
     CHECK(mp.at(ip1).size() == 1);
     CHECK(mp.at(ip1).at(0) == "#dota");
 
+    CHECK(insert(mp, ip1, "#overwatch"));
+    CHECK(mp.at(ip1).size() == 2);
+    CHECK(mp.at(ip1).at(0) == "#dota");
+    CHECK(mp.at(ip1).at(1) == "#overwatch");
+}
+
+TEST_CASE("Mapa: insert - diferentes tipos IPs"){
+    Mapa mp;
+    std::string ip1 = "::1 2001";
+    std::string ip2 = "::1 2002";
+    std::string ip3 = "0.0.0.0 2001";
+    std::string ip4 = "0.0.0.0 2002";
+    std::string ip5 = "2001:db8:3c4d:15::1a2f:1a2b 2001";
+    std::string ip6 = "2001:db8:3c4d:15::1a2f:1a2b 2002";
+
+    SUBCASE("IPv6 abreviado"){
+        insert(mp, ip1, "#dota");
+        CHECK(mp.at(ip1).size() == 1);
+        CHECK(mp.at(ip1).at(0) == "#dota");
+
+        insert(mp, ip2, "#lol");
+        CHECK(mp.at(ip2).size() == 1);
+        CHECK(mp.at(ip2).at(0) == "#lol");
+
+        CHECK(insert(mp, ip1, "#overwatch"));
+        CHECK(mp.at(ip1).size() == 2);
+        CHECK(mp.at(ip1).at(0) == "#dota");
+        CHECK(mp.at(ip1).at(1) == "#overwatch");
+    }
+    SUBCASE("IPv4"){
+        CHECK(insert(mp, ip3, "#lol"));
+        CHECK(mp.at(ip3).size() == 1);
+        CHECK(mp.at(ip3).at(0) == "#lol");
+
+        CHECK(insert(mp, ip4, "#lol1"));
+        CHECK(mp.at(ip4).size() == 1);
+        CHECK(mp.at(ip4).at(0) == "#lol1");
+
+        CHECK(insert(mp, ip3, "#overwatch"));
+        CHECK(mp.at(ip3).size() == 2);
+        CHECK(mp.at(ip3).at(0) == "#lol");
+        CHECK(mp.at(ip3).at(1) == "#overwatch");
+    }
+    SUBCASE("IPv6 completo"){
+        CHECK(insert(mp, ip5, "#lol"));
+        CHECK(mp.at(ip5).size() == 1);
+        CHECK(mp.at(ip5).at(0) == "#lol");
+
+        CHECK(insert(mp, ip6, "#lol1"));
+        CHECK(mp.at(ip6).size() == 1);
+        CHECK(mp.at(ip6).at(0) == "#lol1");
+
+        CHECK(insert(mp, ip5, "#overwatch"));
+        CHECK(mp.at(ip5).size() == 2);
+        CHECK(mp.at(ip5).at(0) == "#lol");
+        CHECK(mp.at(ip5).at(1) == "#overwatch");
+    }
+}
+
+TEST_CASE("Mapa: remove"){
+    Mapa mp;
+    std::string ip1 = "::1 2001";
+
+    CHECK(mp.size() == 0);
+    CHECK_FALSE(remove(mp, ip1, "#overwatch"));
+    CHECK_FALSE(remove(mp, ip1, "#dota"));
+
+    insert(mp, ip1, "#dota");
+    CHECK_FALSE(remove(mp, ip1, "#overwatch"));
+    
     insert(mp, ip1, "#overwatch");
     CHECK(mp.at(ip1).size() == 2);
     CHECK(mp.at(ip1).at(0) == "#dota");
     CHECK(mp.at(ip1).at(1) == "#overwatch");
 
-    insert(mp, ip2, "#lol");
-    CHECK(mp.at(ip2).size() == 1);
-    CHECK(mp.at(ip2).at(0) == "#lol");
+    insert(mp, ip1, "#lol");
+    CHECK(mp.at(ip1).size() == 3);
+    CHECK(mp.at(ip1).at(0) == "#dota");
+    CHECK(mp.at(ip1).at(1) == "#overwatch");
+    CHECK(mp.at(ip1).at(2) == "#lol");
 
-    insert(mp, ip3, "#lol");
-    CHECK(mp.at(ip3).size() == 1);
-    CHECK(mp.at(ip3).at(0) == "#lol");
 
-    insert(mp, ip4, "#lol1");
-    CHECK(mp.at(ip4).size() == 1);
-    CHECK(mp.at(ip4).at(0) == "#lol1");
+    CHECK(remove(mp, ip1, "#dota"));
+    CHECK(mp.at(ip1).size() == 2);
+    CHECK(mp.at(ip1).at(0) == "#overwatch");
+    CHECK(mp.at(ip1).at(1) == "#lol");
+    CHECK_FALSE(remove(mp, ip1, "#dota"));
+
+    CHECK(mp.at(ip1).size() == 2);
+    CHECK(mp.at(ip1).at(0) == "#overwatch");
+    CHECK(mp.at(ip1).at(1) == "#lol");
+
+    CHECK(remove(mp, ip1, "#overwatch"));
+    CHECK(mp.at(ip1).size() == 1);
+    CHECK(mp.at(ip1).at(0) == "#lol");
 }
 
 TEST_CASE("validateString"){
@@ -126,6 +202,7 @@ TEST_CASE("validateString"){
     CHECK_FALSE(validString("çÇ"));
     CHECK_FALSE(validString("¬~<>^´´`|"));
 }
+
 TEST_CASE("findNewLine"){
     CHECK(findNewLine("") == -1);
     CHECK(findNewLine("aaa") == -1);
@@ -153,7 +230,7 @@ TEST_CASE("Multiple Messages one package"){
 
                 CHECK(std::string(cpy) == "boa tarde #MaisUmDia");
 
-                int oldfind = find;
+                // int oldfind = find;
                 find = findNewLine(buf,find+1);
                 CHECK(find == -1);
             }while(find != -1);

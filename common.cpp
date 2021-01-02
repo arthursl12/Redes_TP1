@@ -167,19 +167,24 @@ void usedtags(std::string& msg, std::set<std::string>& out){
 }
 
 /*
-No mapa ("banco de dados"), insere a tag dentre as tags que o usuário com ip
-fornecido já se inscreveu 
+No mapa ("banco de dados"), insere a tag dentre as tags que o usuário já se 
+inscreveu. O usuário deve ser identificado com seu IP e sua porta (output da 
+função 'addrtostr').
+
+Retorna 'true' se o usuário ainda não seguia tal tag (houve alteração no BD). 
+Retorna 'false' se o usuário já seguia a tag (não houve alteração). 
 */
-void insert(Mapa& mp, std::string ip_user, std::string tag){
+bool insert(Mapa& mp, std::string caddrtstr, std::string tag){
     // Procura cadastro desse usuário
-    auto it = mp.find(ip_user);
+    auto it = mp.find(caddrtstr);
     
     if (it == mp.end()){
         // Usuário não está presente, temos que criar o cadastro
         std::vector<std::string> tags_subscribed;
         tags_subscribed.push_back(tag);
-        Par p = std::make_pair<std::string&, std::vector<std::string>&>(ip_user, tags_subscribed);
+        Par p = std::make_pair<std::string&, std::vector<std::string>&>(caddrtstr, tags_subscribed);
         mp.insert(p);
+        return true;
     }else{
         // Usuário já está presente, temos que atualizar as tags inscritas
         std::vector<std::string> tags_subscribed = (*it).second;
@@ -194,8 +199,48 @@ void insert(Mapa& mp, std::string ip_user, std::string tag){
         if(it2 == tags_subscribed.end()){
             // Ainda não se inscreveu na tag, inscrevê-lo
             it->second.push_back(tag);
+            return true;
         }
         // Se já estiver inscrito nada é feito
+        return false;
+    }
+}
+
+/*
+No mapa ("banco de dados"), remove a tag das tags que o usuário já se inscreveu.
+O usuário deve ser identificado com seu IP e sua porta (output da função 
+'addrtostr').
+
+Retorna 'true' se o usuário seguia tal tag (houve alteração no BD). 
+Retorna 'false' se o usuário não seguia a tag (não houve alteração). 
+*/
+bool remove(Mapa& mp, std::string caddrtstr, std::string tag){
+    // Procura cadastro desse usuário
+    auto it = mp.find(caddrtstr);
+    
+    if (it == mp.end()){
+        // Usuário não está presente, nada a ser feito nem removido
+        return false;
+    }else{
+        // Usuário já está presente, temos que atualizar as tags inscritas
+        std::vector<std::string> tags_subscribed = (*it).second;
+
+        // Verifica se está inscrito
+        auto it2 = it->second.begin();
+        for(; it2 != it->second.end(); it2++){
+            if(*it2 == tag)
+                break;
+        }
+
+        if(it2 == it->second.end()){
+            // Não se inscreveu na tag, nada há que remover
+            return false;
+        }else{
+            // Está inscrito, temos que remover
+            it->second.erase(it2);
+            return true;
+        }
+        
     }
 }
 

@@ -224,11 +224,10 @@ int main(int argc, char* argv[]){
         logexit("setsockopt");
     }
 
-    // Inicializa o servidor
+    // Inicializa o servidor e aguarda conexões dos clientes
     struct sockaddr* addr = (struct sockaddr*)(&storage);
     if (bind(s, addr, sizeof(storage)) != 0){ logexit("bind");}
     if (listen(s, 10) != 0){ logexit("listen");}
-
     char addrstr[BUFSZ];
     addrtostr(addr, addrstr, BUFSZ);
     printf("[log] Bound to %s, waiting connections...\n", addrstr);
@@ -237,6 +236,7 @@ int main(int argc, char* argv[]){
     printf("[log] Creating ping_thread\n");
     pthread_t ping_thread;
     pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
+    // Loop principal
     while(1){
         struct sockaddr_storage cstorage;
         struct sockaddr* caddr = (struct sockaddr*)(&cstorage);

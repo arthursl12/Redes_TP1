@@ -26,7 +26,8 @@ int server_sockaddr_init(const char *proto, const char *portstr,
 void strtolist(std::string& msg, std::list<std::string>& out);
 void usedtags(std::string& msg, std::set<std::string>& out);
 
-void insert(Mapa& mp, std::string ip_user, std::string tag);
+bool insert(Mapa& mp, std::string caddrtstr, std::string tag);
+bool remove(Mapa& mp, std::string caddrtstr, std::string tag);
 void removeNewLine(char* str);
 bool validString(std::string str);
 int findNewLine(std::string str, int pos = 0);
