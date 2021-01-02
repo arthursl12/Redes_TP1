@@ -44,9 +44,9 @@ void removeClient(std::vector<int>& cSockS, int cl){
 
 
 /*
-Função auxiliar que recebe mensagem do cliente (cujos dados estão em 'cdata' e
-endereço em 'caddrstr') até encontrar um '\\n'. A mensagem é colocada na string 
-'recStr'. 
+Função auxiliar de 'client_thread' que recebe mensagem do cliente (cujos dados 
+estão em 'cdata' e endereço em 'caddrstr') até encontrar um '\\n'. A mensagem 
+é colocada na string 'recStr'. 
 
 O vector de soquetes de clientes 'cSockS' é passado para desconectar o cliente 
 em questão caso haja algum problema. O booleano 'connected' é colocado em 
@@ -103,24 +103,96 @@ void receberMsg(std::string& recStr,
     count = total;
 }
 
+/*
+Função auxiliar de 'processarMsg' que dada mensagem de inscrição numa tag 
+'msgInsc' (que começa com '+') inscreve o cliente (cujos dados estão em 'cdata' 
+e endereço em 'caddrstr') na tag fornecida. Essa inscrição fica efetivada no
+mapa mp.
+*/
+void subscribe(std::string& msgInsc, 
+               struct client_data* cdata, 
+               char caddrstr[],
+               int& count,
+               Mapa* mp)
+{
+    std::cout << "[sub] " << caddrstr << " requested to subscribe" << std::endl;
+    std::string tag = msgInsc.substr(1);
+    tag = "#" + tag;
+    
+    bool newSub = subscribeToTag(*mp, caddrstr, tag);
+    if (newSub){
+        // Manda confirmação de inscrição
+        std::cout << "[sub] " << caddrstr << " sucessfully subscribed to " << tag << std::endl;
 
+        char buf3[BUFSZ];
+        memset(buf3, 0, BUFSZ);
+        sprintf(buf3, "subscribed %s\n", msgInsc.c_str());
+        count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
+        if (count != (int) strlen(buf3)+1){ logexit("send");}
+    }else{
+        // Manda aviso que já era inscrito
+        std::cout << "[sub] " << caddrstr << " already subscribed to " << tag  << " (no action needed)" << std::endl;
+        char buf4[BUFSZ];
+        memset(buf4, 0, BUFSZ);
+        sprintf(buf4, "already subscribed %s\n", msgInsc.c_str());
+        count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
+        if (count != (int) strlen(buf4)+1){ logexit("send");}
+    }
+}
 
 /*
-Função auxiliar que processa a mensagem do cliente (cujos dados estão em 'cdata'
-e endereço em 'caddrstr'). A mensagem está na string 'recStr'. Se houver mais de
-um newline, será tratado como mais de uma mensagem.
+Função auxiliar de 'processarMsg' que dada mensagem de desinscrição numa tag 
+'msgInsc' (que começa com '+') desinscreve o cliente (cujos dados estão em 
+'cdata' e endereço em 'caddrstr') da tag fornecida. Essa inscrição será removida
+efetivada do mapa mp.
+*/
+void unsubscribe(std::string& cpyStr, 
+                 struct client_data* cdata, 
+                 char caddrstr[],
+                 int& count,
+                 Mapa* mp)
+{
+    std::cout << "[uns] " << caddrstr << " requested to unsubscribe" << std::endl;
+    std::string tag = cpyStr.substr(1);
+    tag = "#" + tag;
+    
+    bool newSub = unsubscribeFromTag(*mp, caddrstr, tag);
+    if (newSub){
+        // Manda confirmação de inscrição
+        std::cout << "[uns] " << caddrstr << " not subscribing to " << tag << " anymore" << std::endl;
+
+        char buf3[BUFSZ];
+        memset(buf3, 0, BUFSZ);
+        sprintf(buf3, "unsubscribed %s\n", cpyStr.c_str());
+        count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
+        if (count != (int) strlen(buf3)+1){ logexit("send");}
+    }else{
+        // Manda aviso que já era inscrito
+        std::cout << "[uns] " << caddrstr << " not subscribed to " << tag << " (no action needed)" << std::endl;
+        char buf4[BUFSZ];
+        memset(buf4, 0, BUFSZ);
+        sprintf(buf4, "not subscribed %s\n", cpyStr.c_str());
+        count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
+        if (count != (int) strlen(buf4)+1){ logexit("send");}
+    }
+}
+
+/*
+Função auxiliar  de 'client_thread' que processa a mensagem do cliente (cujos 
+dados estão em 'cdata' e endereço em 'caddrstr'). A mensagem está na string 
+'recStr'. Se houver mais de um newline, será tratado como mais de uma mensagem.
 
 O vector de soquetes de clientes 'cSockS' é passado para desconectar o cliente 
 em questão caso haja algum problema. O booleano 'connected' é colocado em 
 'false' caso isso aconteça.
 */
 void processarMsg(std::string& recStr, 
-                struct client_data* cdata, 
-                char caddrstr[],
-                std::vector<int>* cSockS, 
-                bool& connected,
-                int& count,
-                Mapa* mp)
+                  struct client_data* cdata, 
+                  char caddrstr[],
+                  std::vector<int>* cSockS, 
+                  bool& connected,
+                  int& count,
+                  Mapa* mp)
 {
     int oldfind = -1;
     int find = findNewLine(recStr.c_str());
@@ -146,55 +218,9 @@ void processarMsg(std::string& recStr,
 
             // Se for mensagem de (un)subscribe, fazer as alterações no mapa
             if (cpyStr[0] == '+'){
-                // Subscribe
-                std::cout << "[sub] " << caddrstr << " requested to subscribe" << std::endl;
-                std::string tag = cpyStr.substr(1);
-                tag = "#" + tag;
-                
-                bool newSub = subscribeToTag(*mp, caddrstr, tag);
-                if (newSub){
-                    // Manda confirmação de inscrição
-                    std::cout << "[sub] " << caddrstr << " sucessfully subscribed to " << tag << std::endl;
-
-                    char buf3[BUFSZ];
-                    memset(buf3, 0, BUFSZ);
-                    sprintf(buf3, "subscribed %s\n", cpyStr.c_str());
-                    count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
-                    if (count != (int) strlen(buf3)+1){ logexit("send");}
-                }else{
-                    // Manda aviso que já era inscrito
-                    std::cout << "[sub] " << caddrstr << " already subscribed to " << tag  << " (no action needed)" << std::endl;
-                    char buf4[BUFSZ];
-                    memset(buf4, 0, BUFSZ);
-                    sprintf(buf4, "already subscribed %s\n", cpyStr.c_str());
-                    count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
-                    if (count != (int) strlen(buf4)+1){ logexit("send");}
-                }
+                subscribe(cpyStr, cdata, caddrstr, count, mp);
             }else if(cpyStr[0] == '-'){
-                // Unsubscribe
-                std::cout << "[uns] " << caddrstr << " requested to unsubscribe" << std::endl;
-                std::string tag = cpyStr.substr(1);
-                tag = "#" + tag;
-                
-                bool newSub = unsubscribeFromTag(*mp, caddrstr, tag);
-                if (newSub){
-                    // Manda confirmação de inscrição
-                    std::cout << "[uns] " << caddrstr << " not subscribing to " << tag << " anymore" << std::endl;
-
-                    char buf3[BUFSZ];
-                    memset(buf3, 0, BUFSZ);
-                    sprintf(buf3, "unsubscribed %s\n", cpyStr.c_str());
-                    count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
-                    if (count != (int) strlen(buf3)+1){ logexit("send");}
-                }else{
-                    // Manda aviso que já era inscrito
-                    std::cout << "[uns] " << caddrstr << " not subscribed to " << tag << " (no action needed)" << std::endl;
-                    char buf4[BUFSZ];
-                    memset(buf4, 0, BUFSZ);
-                    sprintf(buf4, "not subscribed %s\n", cpyStr.c_str());
-                    count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
-                    if (count != (int) strlen(buf4)+1){ logexit("send");}
-                }
+                unsubscribe(cpyStr, cdata, caddrstr, count, mp);
             }
 
             // Manda uma confirmação para o cliente
