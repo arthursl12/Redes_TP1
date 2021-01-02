@@ -86,13 +86,14 @@ void* send_msg_handler(void* data) {
 
         // Copiar o buffer para o teste abaixo
         char cpybuf[BUFSZ];
+        memset(cpybuf, 0, BUFSZ);
         strcpy(cpybuf,buf);
         cpybuf[strlen(cpybuf)-1] = '\0';
         if (strcmp(cpybuf,"##quit") == 0){
             // Comando para fechar o cliente
             break;
         }
-
+        memset(buf, 0, BUFSZ);
         fgets(buf, BUFSZ-1, stdin);
     }
     pthread_exit(EXIT_SUCCESS);
@@ -105,13 +106,13 @@ void* recv_msg_handler(void* data) {
     unsigned total = 0;
 
     while (1) {
-        int count = recv(s, buf + total, BUFSZ - total, 0);
-        puts("");
+        int count = recv(s, buf, BUFSZ, 0);
+        // puts("");
         if (count > 0) {
             // Imprime mensagem recebida do servidor
-            removeNewLine(buf);
-            puts(buf);
-            // printf("received %i bytes\n", count);
+            std::cout << buf;
+            // puts(buf);
+            printf("received %i bytes\n", count);
 
             // Imprime texto de input novamente
             printf("message2> ");
@@ -126,6 +127,7 @@ void* recv_msg_handler(void* data) {
             logexit("recv (client)");
         }
         total += count;
+        memset(buf, 0, BUFSZ);
     }
     printf("[log] Recebeu um total de %d bytes\n", total);
     pthread_exit(EXIT_SUCCESS);

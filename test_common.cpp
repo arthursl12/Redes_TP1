@@ -79,25 +79,25 @@ TEST_CASE("usedTags"){
     CHECK(lr.empty() == true);
 }
 
-TEST_CASE("Mapa: insert"){
+TEST_CASE("Mapa: subscribeToTag"){
     Mapa mp;
     std::string ip1 = "::1 2001";
 
-    CHECK(insert(mp, ip1, "#dota"));
+    CHECK(subscribeToTag(mp, ip1, "#dota"));
     CHECK(mp.at(ip1).size() == 1);
     CHECK(mp.at(ip1).at(0) == "#dota");
 
-    CHECK_FALSE(insert(mp, ip1, "#dota"));
+    CHECK_FALSE(subscribeToTag(mp, ip1, "#dota"));
     CHECK(mp.at(ip1).size() == 1);
     CHECK(mp.at(ip1).at(0) == "#dota");
 
-    CHECK(insert(mp, ip1, "#overwatch"));
+    CHECK(subscribeToTag(mp, ip1, "#overwatch"));
     CHECK(mp.at(ip1).size() == 2);
     CHECK(mp.at(ip1).at(0) == "#dota");
     CHECK(mp.at(ip1).at(1) == "#overwatch");
 }
 
-TEST_CASE("Mapa: insert - diferentes tipos IPs"){
+TEST_CASE("Mapa: subscribeToTag - diferentes tipos IPs"){
     Mapa mp;
     std::string ip1 = "::1 2001";
     std::string ip2 = "::1 2002";
@@ -107,83 +107,83 @@ TEST_CASE("Mapa: insert - diferentes tipos IPs"){
     std::string ip6 = "2001:db8:3c4d:15::1a2f:1a2b 2002";
 
     SUBCASE("IPv6 abreviado"){
-        insert(mp, ip1, "#dota");
+        subscribeToTag(mp, ip1, "#dota");
         CHECK(mp.at(ip1).size() == 1);
         CHECK(mp.at(ip1).at(0) == "#dota");
 
-        insert(mp, ip2, "#lol");
+        subscribeToTag(mp, ip2, "#lol");
         CHECK(mp.at(ip2).size() == 1);
         CHECK(mp.at(ip2).at(0) == "#lol");
 
-        CHECK(insert(mp, ip1, "#overwatch"));
+        CHECK(subscribeToTag(mp, ip1, "#overwatch"));
         CHECK(mp.at(ip1).size() == 2);
         CHECK(mp.at(ip1).at(0) == "#dota");
         CHECK(mp.at(ip1).at(1) == "#overwatch");
     }
     SUBCASE("IPv4"){
-        CHECK(insert(mp, ip3, "#lol"));
+        CHECK(subscribeToTag(mp, ip3, "#lol"));
         CHECK(mp.at(ip3).size() == 1);
         CHECK(mp.at(ip3).at(0) == "#lol");
 
-        CHECK(insert(mp, ip4, "#lol1"));
+        CHECK(subscribeToTag(mp, ip4, "#lol1"));
         CHECK(mp.at(ip4).size() == 1);
         CHECK(mp.at(ip4).at(0) == "#lol1");
 
-        CHECK(insert(mp, ip3, "#overwatch"));
+        CHECK(subscribeToTag(mp, ip3, "#overwatch"));
         CHECK(mp.at(ip3).size() == 2);
         CHECK(mp.at(ip3).at(0) == "#lol");
         CHECK(mp.at(ip3).at(1) == "#overwatch");
     }
     SUBCASE("IPv6 completo"){
-        CHECK(insert(mp, ip5, "#lol"));
+        CHECK(subscribeToTag(mp, ip5, "#lol"));
         CHECK(mp.at(ip5).size() == 1);
         CHECK(mp.at(ip5).at(0) == "#lol");
 
-        CHECK(insert(mp, ip6, "#lol1"));
+        CHECK(subscribeToTag(mp, ip6, "#lol1"));
         CHECK(mp.at(ip6).size() == 1);
         CHECK(mp.at(ip6).at(0) == "#lol1");
 
-        CHECK(insert(mp, ip5, "#overwatch"));
+        CHECK(subscribeToTag(mp, ip5, "#overwatch"));
         CHECK(mp.at(ip5).size() == 2);
         CHECK(mp.at(ip5).at(0) == "#lol");
         CHECK(mp.at(ip5).at(1) == "#overwatch");
     }
 }
 
-TEST_CASE("Mapa: remove"){
+TEST_CASE("Mapa: unsubscribeFromTag"){
     Mapa mp;
     std::string ip1 = "::1 2001";
 
     CHECK(mp.size() == 0);
-    CHECK_FALSE(remove(mp, ip1, "#overwatch"));
-    CHECK_FALSE(remove(mp, ip1, "#dota"));
+    CHECK_FALSE(unsubscribeFromTag(mp, ip1, "#overwatch"));
+    CHECK_FALSE(unsubscribeFromTag(mp, ip1, "#dota"));
 
-    insert(mp, ip1, "#dota");
-    CHECK_FALSE(remove(mp, ip1, "#overwatch"));
+    subscribeToTag(mp, ip1, "#dota");
+    CHECK_FALSE(unsubscribeFromTag(mp, ip1, "#overwatch"));
     
-    insert(mp, ip1, "#overwatch");
+    subscribeToTag(mp, ip1, "#overwatch");
     CHECK(mp.at(ip1).size() == 2);
     CHECK(mp.at(ip1).at(0) == "#dota");
     CHECK(mp.at(ip1).at(1) == "#overwatch");
 
-    insert(mp, ip1, "#lol");
+    subscribeToTag(mp, ip1, "#lol");
     CHECK(mp.at(ip1).size() == 3);
     CHECK(mp.at(ip1).at(0) == "#dota");
     CHECK(mp.at(ip1).at(1) == "#overwatch");
     CHECK(mp.at(ip1).at(2) == "#lol");
 
 
-    CHECK(remove(mp, ip1, "#dota"));
+    CHECK(unsubscribeFromTag(mp, ip1, "#dota"));
     CHECK(mp.at(ip1).size() == 2);
     CHECK(mp.at(ip1).at(0) == "#overwatch");
     CHECK(mp.at(ip1).at(1) == "#lol");
-    CHECK_FALSE(remove(mp, ip1, "#dota"));
+    CHECK_FALSE(unsubscribeFromTag(mp, ip1, "#dota"));
 
     CHECK(mp.at(ip1).size() == 2);
     CHECK(mp.at(ip1).at(0) == "#overwatch");
     CHECK(mp.at(ip1).at(1) == "#lol");
 
-    CHECK(remove(mp, ip1, "#overwatch"));
+    CHECK(unsubscribeFromTag(mp, ip1, "#overwatch"));
     CHECK(mp.at(ip1).size() == 1);
     CHECK(mp.at(ip1).at(0) == "#lol");
 }

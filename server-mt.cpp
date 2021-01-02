@@ -12,7 +12,6 @@
 
 #define BUFSZ 1024
 
-
 void usage(int argc, char* argv[]){
     printf("usage: %s <v4|v6> <server_port>\n", argv[0]);
     printf("example: %s v4 51511\n", argv[0]);
@@ -27,6 +26,7 @@ struct client_data{
 struct cl_thd_args{
     struct client_data* cdata;
     std::vector<int>* cSockS;
+    Mapa* mp;
 };
 
 /*
@@ -103,6 +103,8 @@ void receberMsg(std::string& recStr,
     count = total;
 }
 
+
+
 /*
 Função auxiliar que processa a mensagem do cliente (cujos dados estão em 'cdata'
 e endereço em 'caddrstr'). A mensagem está na string 'recStr'. Se houver mais de
@@ -117,7 +119,8 @@ void processarMsg(std::string& recStr,
                 char caddrstr[],
                 std::vector<int>* cSockS, 
                 bool& connected,
-                int& count)
+                int& count,
+                Mapa* mp)
 {
     int oldfind = -1;
     int find = findNewLine(recStr.c_str());
@@ -139,6 +142,33 @@ void processarMsg(std::string& recStr,
                 removeClient(*cSockS, cdata->csock);
                 connected = false;
                 break;
+            }
+
+            // Se for mensagens de (un)subscribe, fazer as alterações
+            if (cpyStr[0] == '+'){
+                std::cout << "[log] " << caddrstr << " requested to subscribe" << std::endl;
+                // Subscribe
+                std::string tag = cpyStr.substr(1);
+                tag = "#" + tag;
+                
+                bool newSub = subscribeToTag(*mp, caddrstr, tag);
+                if (newSub){
+                    // Manda confirmação de inscrição
+                    char buf3[BUFSZ];
+                    memset(buf3, 0, BUFSZ);
+                    sprintf(buf3, "subscribed %s\n", cpyStr.c_str());
+                    count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
+                    if (count != (int) strlen(buf3)+1){ logexit("send");}
+                }else{
+                    // Manda aviso que já era inscrito
+                    char buf4[BUFSZ];
+                    memset(buf4, 0, BUFSZ);
+                    sprintf(buf4, "already subscribed %s\n", cpyStr.c_str());
+                    count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
+                    if (count != (int) strlen(buf4)+1){ logexit("send");}
+                }
+            }else if(cpyStr[0] == '-'){
+                // Unsubscribe
             }
 
             // Manda uma confirmação para o cliente
@@ -165,6 +195,7 @@ void* client_thread(void* arguments){
     struct client_data* cdata = (struct client_data*) args->cdata;
     struct sockaddr* caddr = (struct sockaddr*)(&cdata->storage);
     std::vector<int>* cSockS = (std::vector<int>*) args->cSockS;
+    Mapa* mp = args->mp;
 
     // Imprime que a conexão teve sucesso
     char caddrstr[BUFSZ];
@@ -182,7 +213,7 @@ void* client_thread(void* arguments){
         std::cout << "[log] Message received" << std::endl;
         
         // Processa a mensagem (separa mensagens múltiplas)
-        processarMsg(recStr, cdata, caddrstr, cSockS, connected, count);
+        processarMsg(recStr, cdata, caddrstr, cSockS, connected, count, mp);
     }
     removeClient(*cSockS, cdata->csock);
     close(cdata->csock);
@@ -192,11 +223,12 @@ void* client_thread(void* arguments){
 void* ping_handler(void* data){
     std::vector<int>* cSockS = (std::vector<int>*) data;
     while(1){
-        sleep(2);
+        sleep(10);
         printf("[log] Ping...\n");
         for(int sock: *cSockS){
             char buf[BUFSZ];
-            sprintf(buf, "Ping!\n");
+            memset(buf, 0, BUFSZ);
+            sprintf(buf, "\nPing!\n");
             size_t count = send(sock, buf, strlen(buf)+1, 0);
             if (count != strlen(buf)+1){
                 logexit("send");
@@ -233,9 +265,11 @@ int main(int argc, char* argv[]){
     printf("[log] Bound to %s, waiting connections...\n", addrstr);
 
     std::vector<int> cSockS;
+    Mapa mp;     // Mapa que guarda as tags dos clientes
     printf("[log] Creating ping_thread\n");
     pthread_t ping_thread;
     pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
+    
     // Loop principal
     while(1){
         struct sockaddr_storage cstorage;
@@ -254,6 +288,7 @@ int main(int argc, char* argv[]){
         args->cdata->csock = csock;
         memcpy(&(args->cdata->storage), &cstorage, sizeof(cstorage));
         args->cSockS = &cSockS;
+        args->mp = &mp;
 
         // Conecta o cliente via uma thread
         pthread_t tid;

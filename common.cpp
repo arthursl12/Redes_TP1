@@ -174,7 +174,7 @@ função 'addrtostr').
 Retorna 'true' se o usuário ainda não seguia tal tag (houve alteração no BD). 
 Retorna 'false' se o usuário já seguia a tag (não houve alteração). 
 */
-bool insert(Mapa& mp, std::string caddrtstr, std::string tag){
+bool subscribeToTag(Mapa& mp, std::string caddrtstr, std::string tag){
     // Procura cadastro desse usuário
     auto it = mp.find(caddrtstr);
     
@@ -214,7 +214,7 @@ O usuário deve ser identificado com seu IP e sua porta (output da função
 Retorna 'true' se o usuário seguia tal tag (houve alteração no BD). 
 Retorna 'false' se o usuário não seguia a tag (não houve alteração). 
 */
-bool remove(Mapa& mp, std::string caddrtstr, std::string tag){
+bool unsubscribeFromTag(Mapa& mp, std::string caddrtstr, std::string tag){
     // Procura cadastro desse usuário
     auto it = mp.find(caddrtstr);
     
