@@ -38,9 +38,9 @@ void* client_thread(void* data){
         // Receber a mensagem do cliente
         char rec[BUFSZ];
         memset(rec, 0, BUFSZ);
-
         std::string recStr = "";
 
+        // Receber até encontrar o 'newline' ('\n')
         int count = 0;
         bool newLineFound = false;
         while(!newLineFound){
@@ -62,10 +62,11 @@ void* client_thread(void* data){
                 break;
             }
 
-
+            // Adiciona o que foi recebido 
             recStr += rec;
             std::cout << "[log] Partial string " << recStr << std::endl;
 
+            // Procura newline no que foi recebido
             int find = findNewLine(rec);
             newLineFound = (find != -1) ? true : false;
             std::cout << "[log] Newline at index: " << find << std::endl;
@@ -73,8 +74,10 @@ void* client_thread(void* data){
             std::cout << "[log] Found newline: " << newLineFound << std::endl;
         }
         std::cout << "[log] Message received" << std::endl;
-        
         if(!connected){ break;}
+
+        // Pós-processamento: caso mais de uma mensagem tenha chegado num mesmo
+        // pacote
         int oldfind = -1;
         int find = findNewLine(recStr.c_str());
         if (find != -1){
@@ -112,6 +115,22 @@ void* client_thread(void* data){
     pthread_exit(EXIT_SUCCESS);
 }
 
+void* ping_handler(void* data){
+    std::vector<int>* cSockS = (std::vector<int>*) data;
+    while(1){
+        sleep(2);
+        printf("[log] Ping...\n");
+        for(int sock: *cSockS){
+            char buf[BUFSZ];
+            sprintf(buf, "Ping!\n");
+            size_t count = send(sock, buf, strlen(buf)+1, 0);
+            if (count != strlen(buf)+1){
+                logexit("send");
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]){
     if (argc < 3){
         usage(argc, argv);
@@ -147,6 +166,9 @@ int main(int argc, char* argv[]){
     printf("bound to %s, waiting connections\n", addrstr);
 
     std::vector<int> cSockS;
+    printf("[log] Creating ping_thread\n");
+    pthread_t ping_thread;
+    pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
     while(1){
         struct sockaddr_storage cstorage;
         struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
@@ -168,16 +190,8 @@ int main(int argc, char* argv[]){
         cSockS.push_back(csock);
         printf("[log] size of vector of clients: %lu\n", cSockS.size());
         pthread_create(&tid, NULL, client_thread, cdata);
-
-        for(int sock: cSockS){
-            printf("Sock: %i\n",sock);
-            // char buf[BUFSZ];
-            // sprintf(buf, "Ping!\n");
-            // size_t count = send(sock, buf, strlen(buf)+1, 0);
-            // if (count != strlen(buf)+1){
-            //     logexit("send");
-            // }
-        }
+        
+        
     }
     exit(EXIT_SUCCESS);
 }

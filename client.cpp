@@ -20,6 +20,7 @@ void usage(int argc, char *argv[]){
 
 #define BUFSZ 1024
 
+// Cliente manda mensagem em pedaços, usada apenas para testes
 void* double_send_msg_handler(void* data) {
     int s = *((int *) data);
     char buf[BUFSZ];
@@ -33,25 +34,22 @@ void* double_send_msg_handler(void* data) {
 
     while(1) {
         std::string bufCpy1 = buf;
-        std::cout << bufCpy1.size() << std::endl;
+
         int oldSize = 0;
         for (int i = 0; i < 2; i++){
             // Envia a mensagem em 2 packets
             std::string bufCpy = buf;
             int size = bufCpy.size()/2;
             bufCpy = bufCpy.substr(oldSize, size);
-            std::cout << "\t" << bufCpy << ", " << size << std::endl;
             int count = send(s, bufCpy.c_str(), size, 0);
             if (count != size){ logexit("send");}
             oldSize = size;
         }
         std::string bufCpy = buf;
-        std::cout << "AQUI" << std::endl;
         if (bufCpy.size() % 2 == 1){
             // Manda o último caractere
             bufCpy = bufCpy.at(bufCpy.size()-1);
             int size = bufCpy.size();
-            std::cout << "\tS" << bufCpy << ", " << size << std::endl;
             int count = send(s, bufCpy.c_str(), size, 0);
             if (count != size){ logexit("send");}
         }
@@ -64,7 +62,6 @@ void* double_send_msg_handler(void* data) {
             // Comando para fechar o cliente
             break;
         }
-        std::cout << "AQUI" << std::endl;
 
         fgets(buf, BUFSZ-1, stdin);
     }
@@ -109,18 +106,18 @@ void* recv_msg_handler(void* data) {
 
     while (1) {
         int count = recv(s, buf + total, BUFSZ - total, 0);
-
+        puts("");
         if (count > 0) {
             // Imprime mensagem recebida do servidor
             removeNewLine(buf);
             puts(buf);
-            printf("received %i bytes\n", count);
+            // printf("received %i bytes\n", count);
 
             // Imprime texto de input novamente
             printf("message2> ");
             fflush(stdout);
         }else if (count == 0){
-            printf("Servidor encerrou a conexão.\n");
+            printf("[log] Servidor encerrou a conexão.\n");
             close(s);
             exit(EXIT_FAILURE);
             break;
@@ -130,7 +127,7 @@ void* recv_msg_handler(void* data) {
         }
         total += count;
     }
-    printf("received total %d bytes\n", total);
+    printf("[log] Recebeu um total de %d bytes\n", total);
     pthread_exit(EXIT_SUCCESS);
 }
 
@@ -166,15 +163,17 @@ int main(int argc, char* argv[]){
     if (arg == NULL) { logexit("malloc");}
     *arg = s;
 
+    pthread_create(&send_msg_thread, NULL, send_msg_handler, arg);
+    // Esperar a thread de enviar mensagem terminar, para que o programa espere
+    // que usuário digite
+    (void)pthread_join(send_msg_thread, NULL); 
+
     // pthread_create(&send_msg_thread, NULL, double_send_msg_handler, arg);
     // // Esperar a thread de enviar mensagem terminar, para que o programa espere
     // // que usuário digite
     // (void)pthread_join(send_msg_thread, NULL); 
 
-    pthread_create(&send_msg_thread, NULL, send_msg_handler, arg);
-    // Esperar a thread de enviar mensagem terminar, para que o programa espere
-    // que usuário digite
-    (void)pthread_join(send_msg_thread, NULL); 
+
 
     close(s);
     exit(EXIT_SUCCESS);
