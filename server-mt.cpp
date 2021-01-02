@@ -204,7 +204,8 @@ void processarMsg(std::string& recStr,
             
             // Log mensagem recebida
             printf("[msg] %s, %d bytes: \"%s\"\n", \
-                    caddrstr, (int)count, cpyStr.c_str());
+                                    caddrstr, (int)count, cpyStr.c_str());
+
 
             // Verifica se a mensagem é o comando de fim da execução do cliente
             if (strcmp(cpyStr.c_str(),"##quit") == 0){
@@ -219,18 +220,21 @@ void processarMsg(std::string& recStr,
             // Se for mensagem de (un)subscribe, fazer as alterações no mapa
             if (cpyStr[0] == '+'){
                 subscribe(cpyStr, cdata, caddrstr, count, mp);
+                break;
             }else if(cpyStr[0] == '-'){
                 unsubscribe(cpyStr, cdata, caddrstr, count, mp);
+                break;
             }
 
-            // Manda uma confirmação para o cliente
+
+            // Manda uma confirmação de recebimento para o cliente
             char buf2[BUFSZ];
             sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
             count = send(cdata->csock, buf2, strlen(buf2)+1, 0);
             if (count != (int) strlen(buf2)+1){
                 logexit("send");
             }
-            
+
             oldfind = find;
             find = findNewLine(recStr,find+1);
             // Processa a mensagem seguinte se houver mais de um '\n'
