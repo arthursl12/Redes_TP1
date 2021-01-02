@@ -151,6 +151,7 @@ void processarMsg(std::string& recStr,
             
             oldfind = find;
             find = findNewLine(recStr,find+1);
+            // Processa a mensagem seguinte se houver mais de um '\n'
         }while(find != -1);
     }
 }
@@ -205,38 +206,32 @@ void* ping_handler(void* data){
 }
 
 int main(int argc, char* argv[]){
+    // Processa os argumentos passados
     if (argc < 3){
         usage(argc, argv);
     }
-
     struct sockaddr_storage storage;
     if (server_sockaddr_init(argv[1], argv[2], &storage) != 0){
         usage(argc, argv);
     }
     
+    // Socket do servidor
     int s;
     s = socket(storage.ss_family, SOCK_STREAM, 0);
-    if (s == -1) {
-        logexit("socket");
-    }
-
+    if (s == -1) { logexit("socket");}
     int enable = 1;
     if (0 != setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))){
         logexit("setsockopt");
     }
 
+    // Inicializa o servidor
     struct sockaddr* addr = (struct sockaddr*)(&storage);
-    if (bind(s, addr, sizeof(storage)) != 0){
-        logexit("bind");
-    }
-
-    if (listen(s, 10) != 0){
-        logexit("listen");
-    }
+    if (bind(s, addr, sizeof(storage)) != 0){ logexit("bind");}
+    if (listen(s, 10) != 0){ logexit("listen");}
 
     char addrstr[BUFSZ];
     addrtostr(addr, addrstr, BUFSZ);
-    printf("bound to %s, waiting connections\n", addrstr);
+    printf("[log] Bound to %s, waiting connections...\n", addrstr);
 
     std::vector<int> cSockS;
     printf("[log] Creating ping_thread\n");
@@ -247,32 +242,23 @@ int main(int argc, char* argv[]){
         struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
         socklen_t caddrlen = sizeof(cstorage);
 
+        // Aceita a conexão do cliente
         int csock = accept(s, caddr, &caddrlen);
-        if (csock == -1){
-            logexit("accept");
-        }
-
-        // struct client_data *cdata = (struct client_data*) malloc(sizeof(*cdata));
-        // if (!cdata){
-        //     logexit("malloc");
-        // }
+        if (csock == -1){ logexit("accept");}
 
         // Argumentos para a thread do cliente
         struct cl_thd_args *args = (struct cl_thd_args*) malloc(sizeof(*args));
-        if (!args){
-            logexit("malloc");
-        }
+        if (!args){ logexit("malloc");}
         struct client_data *cdata = (struct client_data*) malloc(sizeof(*cdata));
         args->cdata = cdata;
         args->cdata->csock = csock;
         memcpy(&(args->cdata->storage), &cstorage, sizeof(cstorage));
         args->cSockS = &cSockS;
 
+        // Conecta o cliente via uma thread
         pthread_t tid;
         cSockS.push_back(csock);
         pthread_create(&tid, NULL, client_thread, args);
-        
-        
     }
     exit(EXIT_SUCCESS);
 }
