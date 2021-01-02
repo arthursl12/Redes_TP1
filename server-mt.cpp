@@ -42,6 +42,122 @@ void removeClient(std::vector<int>& cSockS, int cl){
     }
 }
 
+
+/*
+Função auxiliar que recebe mensagem do cliente (cujos dados estão em 'cdata' e
+endereço em 'caddrstr') até encontrar um '\\n'. A mensagem é colocada na string 
+'recStr'. 
+
+O vector de soquetes de clientes 'cSockS' é passado para desconectar o cliente 
+em questão caso haja algum problema. O booleano 'connected' é colocado em 
+'false' caso isso aconteça.
+*/
+void receberMsg(std::string& recStr, 
+                struct client_data* cdata, 
+                char caddrstr[],
+                std::vector<int>* cSockS, 
+                bool& connected,
+                int& count)
+{
+    // Buffer do que foi recebido
+    char rec[BUFSZ];
+    memset(rec, 0, BUFSZ);
+    
+    // Receber até encontrar um 'newline' ('\n')
+    int total = 0;
+    bool newLineFound = false;
+    while(!newLineFound){
+        count = recv(cdata->csock, rec, BUFSZ-1, 0);
+
+        if (count == 0){
+            // Sem mensagens a receber: cliente desligou
+            printf("[log] %s closed connection\n", caddrstr);
+            connected = false;
+            removeClient(*cSockS, cdata->csock);
+            break;
+        }else if (count < 0){
+            // Erro no recv
+            logexit("recv (server)");
+        }
+        
+        // Verifica se todos os caracteres da mensagem são válidos
+        if (!validString(rec)){
+            printf("[log] Invalid message from %s, closing connection\n", caddrstr);
+            connected = false;
+            removeClient(*cSockS, cdata->csock);
+            break;
+        }
+
+        // Adiciona o que foi recebido 
+        recStr += rec;
+        // std::cout << "[log] Partial string " << recStr << std::endl;
+        total += count;
+
+        // Procura newline no que foi recebido
+        int find = findNewLine(rec);
+        newLineFound = (find != -1) ? true : false;
+        std::cout << "[log] Newline at index: " << find << std::endl;
+        std::cout.setf(std::ios::boolalpha);
+        std::cout << "[log] Found newline: " << newLineFound << std::endl;
+    }
+    count = total;
+}
+
+/*
+Função auxiliar que processa a mensagem do cliente (cujos dados estão em 'cdata'
+e endereço em 'caddrstr'). A mensagem está na string 'recStr'. Se houver mais de
+um newline, será tratado como mais de uma mensagem.
+
+O vector de soquetes de clientes 'cSockS' é passado para desconectar o cliente 
+em questão caso haja algum problema. O booleano 'connected' é colocado em 
+'false' caso isso aconteça.
+*/
+void processarMsg(std::string& recStr, 
+                struct client_data* cdata, 
+                char caddrstr[],
+                std::vector<int>* cSockS, 
+                bool& connected,
+                int& count)
+{
+    int oldfind = -1;
+    int find = findNewLine(recStr.c_str());
+    if (find != -1){
+        do{
+            // Pega só a mensagem entre '\n''s
+            std::string bufStr = recStr;
+            std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
+            
+            // Log mensagem recebida
+            printf("[msg] %s, %d bytes: \"%s\"\n", \
+                    caddrstr, (int)count, cpyStr.c_str());
+
+            // Verifica se a mensagem é o comando de fim da execução do cliente
+            if (strcmp(cpyStr.c_str(),"##quit") == 0){
+                // Comando para fim da execução do cliente, podemos encerrar a 
+                // conexão dele no lado do servidor também
+                printf("[log] %s requested to end connection\n", caddrstr);
+                removeClient(*cSockS, cdata->csock);
+                connected = false;
+                break;
+            }
+
+            // Manda uma confirmação para o cliente
+            char buf2[BUFSZ];
+            sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
+            count = send(cdata->csock, buf2, strlen(buf2)+1, 0);
+            if (count != (int) strlen(buf2)+1){
+                logexit("send");
+            }
+            
+            oldfind = find;
+            find = findNewLine(recStr,find+1);
+        }while(find != -1);
+    }
+}
+
+/*
+Thread de um cliente. Recebe e processa mensagens recebidas.
+*/
 void* client_thread(void* arguments){
     // Processa os argumentos recebidos
     struct cl_thd_args* args = (struct cl_thd_args* )arguments;
@@ -56,84 +172,16 @@ void* client_thread(void* arguments){
 
     bool connected = true;
     while(connected){
-        // Receber a mensagem do cliente
-        char rec[BUFSZ];
-        memset(rec, 0, BUFSZ);
-        std::string recStr = "";
-
-        // Receber até encontrar o 'newline' ('\n')
+        // Receber a mensagem do cliente até encontrar o newline
         int count = 0;
-        bool newLineFound = false;
-        while(!newLineFound){
-            count = recv(cdata->csock, rec, BUFSZ-1, 0);
+        std::string recStr = "";
+        receberMsg(recStr, cdata, caddrstr, cSockS, connected, count);
 
-            if (count == 0){
-                // Sem mensagens a receber: cliente desligou
-                printf("[log] %s closed connection\n", caddrstr);
-                connected = false;
-                removeClient(*cSockS, cdata->csock);
-                break;
-            }else if (count < 0){
-                // Erro no recv
-                logexit("recv (server)");
-            }
-            
-            // Verifica se todos os caracteres da mensagem são válidos
-            if (!validString(rec)){
-                printf("[log] Invalid message from %s, closing connection\n", caddrstr);
-                removeClient(*cSockS, cdata->csock);
-                break;
-            }
-
-            // Adiciona o que foi recebido 
-            recStr += rec;
-            std::cout << "[log] Partial string " << recStr << std::endl;
-
-            // Procura newline no que foi recebido
-            int find = findNewLine(rec);
-            newLineFound = (find != -1) ? true : false;
-            std::cout << "[log] Newline at index: " << find << std::endl;
-            std::cout.setf(std::ios::boolalpha);
-            std::cout << "[log] Found newline: " << newLineFound << std::endl;
-        }
         if(!connected){ break;}
         std::cout << "[log] Message received" << std::endl;
         
-        // Pós-processamento: caso mais de uma mensagem tenha chegado num mesmo
-        // pacote
-        int oldfind = -1;
-        int find = findNewLine(recStr.c_str());
-        if (find != -1){
-            do{
-                // Pega só a mensagem entre '\n''s
-                std::string bufStr = recStr;
-                std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
-                
-                // Log mensagem recebida
-                printf("[msg] %s, %d bytes: \"%s\"\n", \
-                        caddrstr, (int)count, cpyStr.c_str());
-
-                // Verifica se a mensagem é o comando de fim da execução do cliente
-                if (strcmp(cpyStr.c_str(),"##quit") == 0){
-                    // Comando para fim da execução do cliente, podemos encerrar a 
-                    // conexão dele no lado do servidor também
-                    printf("[log] %s requested to end connection\n", caddrstr);
-                    removeClient(*cSockS, cdata->csock);
-                    break;
-                }
-
-                // Manda uma confirmação para o cliente
-                char buf2[BUFSZ];
-                sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
-                count = send(cdata->csock, buf2, strlen(buf2)+1, 0);
-                if (count != (int) strlen(buf2)+1){
-                    logexit("send");
-                }
-                
-                oldfind = find;
-                find = findNewLine(recStr,find+1);
-            }while(find != -1);
-        }
+        // Processa a mensagem (separa mensagens múltiplas)
+        processarMsg(recStr, cdata, caddrstr, cSockS, connected, count);
     }
     removeClient(*cSockS, cdata->csock);
     close(cdata->csock);
