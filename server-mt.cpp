@@ -200,6 +200,54 @@ void unsubscribe(std::string& cpyStr,
     }
 }
 
+
+/*
+Função auxiliar de 'processarMsg' que dada mensagem 'msg' replica a mesma para
+todos os clientes que se inscreveram em alguma das tags presentes na mensagem.
+Quem enviou a mensagem originalmente não recebe a mensagem, mesmo que seja 
+inscrito em alguma das tags
+*/
+void notify(std::string msg,
+            char caddrstr[],
+            int& count,
+            MapaTag* ms,
+            MapaIpPorta* mip)
+{
+    // Notificar os seguidores das tags utilizadas
+    std::set<std::string> tags;
+    usedTags(msg, tags);     // Acha as tags utilizadas
+
+    std::set<std::string> subs;
+    // Para cada tag utilizada
+    for(std::string tag : tags){
+        // Acha os seguidores da tag
+        std::set<std::string> subsPartial;
+        notifySet(subsPartial, *ms, tag);  
+        subs = getUnion(subs, subsPartial);
+    }
+
+    // Remover quem enviou a mensagem, se for o caso
+    auto it = subs.find(caddrstr);
+    if (it != subs.end()){
+        subs.erase(it);
+    }
+
+    // Notifica cada cliente no conjunto obtido
+    for(std::string cInfo : subs){
+        auto it = mip->find(cInfo);
+        if (it == mip->end()){ logexit("notify");}
+        int sock = it->second;
+
+        // Manda a mensagem para o cliente em questão
+        char buf2[BUFSZ];
+        sprintf(buf2, "\n%s\n", msg.c_str());
+        count = send(sock, buf2, strlen(buf2)+1, 0);
+        if (count != (int) strlen(buf2)+1){ logexit("send");}
+        std::cout << "[not] sent message to " << it->first << std::endl;
+
+    }
+}
+
 /*
 Função auxiliar  de 'client_thread' que processa a mensagem do cliente (cujos 
 dados estão em 'cdata' e endereço em 'caddrstr'). A mensagem está na string 
@@ -241,6 +289,12 @@ void processarMsg(std::string& recStr,
                 break;
             }
 
+            // Verifica se a mensagem é o comando de fim da execução do servidor
+            if (strcmp(cpyStr.c_str(),"##kill") == 0){
+                printf("[log] %s requested to end server\n", caddrstr);
+                exit(EXIT_SUCCESS);
+            }
+
             // Se for mensagem de (un)subscribe, fazer as alterações no mapa
             if (cpyStr[0] == '+'){
                 subscribe(cpyStr, cdata, caddrstr, count, ms);
@@ -250,44 +304,7 @@ void processarMsg(std::string& recStr,
                 break;
             }
             
-            // Notificar os seguidores das tags utilizadas
-            std::set<std::string> tags;
-            usedTags(cpyStr, tags);     // Acha as tags utilizadas
-
-            std::set<std::string> subs;
-            // Para cada tag utilizada
-            for(std::string tag : tags){
-                // Acha os seguidores da tag
-                std::set<std::string> subsPartial;
-                notifySet(subsPartial, *ms, tag);  
-                subs = getUnion(subs, subsPartial);
-            }
-
-            // Remover quem enviou a mensagem, se for o caso
-            auto it = subs.find(caddrstr);
-            if (it != subs.end()){
-                subs.erase(it);
-            }
-
-            // Notifica cada cliente no conjunto obtido
-            for(std::string cInfo : subs){
-                auto it = mip->find(cInfo);
-                if (it == mip->end()){ logexit("notify");}
-                int sock = it->second;
-
-                // Manda a mensagem para o cliente em questão
-                char buf2[BUFSZ];
-                sprintf(buf2, "\n%s\n", cpyStr.c_str());
-                count = send(sock, buf2, strlen(buf2)+1, 0);
-                if (count != (int) strlen(buf2)+1){ logexit("send");}
-                std::cout << "[not] sent message to " << it->first << std::endl;
-
-            }
-            // TODO: notify subscribers
-            // conjunto de tags OK (usedTags)
-            // dado conjunto de tags, retorna conjunto de usuarios para enviar
-            // associar IP-porta a soquete (mapa int -> string)
-            // remove quem enviou a mensagem, se tiver
+            notify(cpyStr, caddrstr, count, ms, mip);
 
             // Manda uma confirmação de recebimento para o cliente
             char buf2[BUFSZ];
