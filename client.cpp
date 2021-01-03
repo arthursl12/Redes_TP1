@@ -81,8 +81,8 @@ void* send_msg_handler(void* data) {
 
     while(1) {
         // Envia a mensagem
-        size_t count = send(s, buf, strlen(buf)+1, 0);
-        if (count != strlen(buf)+1){ logexit("send");}
+        size_t count = send(s, buf, strlen(buf), 0);
+        if (count != strlen(buf)){ logexit("send");}
 
         // Copiar o buffer para o teste abaixo
         char cpybuf[BUFSZ];

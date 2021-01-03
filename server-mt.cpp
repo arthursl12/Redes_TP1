@@ -12,9 +12,15 @@
 
 #define BUFSZ 1024
 
+// void usage(int argc, char* argv[]){
+//     printf("usage: %s <v4|v6> <server_port>\n", argv[0]);
+//     printf("example: %s v4 51511\n", argv[0]);
+//     exit(EXIT_FAILURE);
+// }
+
 void usage(int argc, char* argv[]){
-    printf("usage: %s <v4|v6> <server_port>\n", argv[0]);
-    printf("example: %s v4 51511\n", argv[0]);
+    printf("usage: %s <server_port>\n", argv[0]);
+    printf("example: %s 51511\n", argv[0]);
     exit(EXIT_FAILURE);
 }
 
@@ -150,16 +156,16 @@ void subscribe(std::string& msgInsc,
         char buf3[BUFSZ];
         memset(buf3, 0, BUFSZ);
         sprintf(buf3, "subscribed %s\n", msgInsc.c_str());
-        count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
-        if (count != (int) strlen(buf3)+1){ logexit("send");}
+        count = send(cdata->csock, buf3, strlen(buf3), 0);
+        if (count != (int) strlen(buf3)){ logexit("send");}
     }else{
         // Manda aviso que já era inscrito
         std::cout << "[sub] " << caddrstr << " already subscribed to " << tag  << " (no action needed)" << std::endl;
         char buf4[BUFSZ];
         memset(buf4, 0, BUFSZ);
         sprintf(buf4, "already subscribed %s\n", msgInsc.c_str());
-        count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
-        if (count != (int) strlen(buf4)+1){ logexit("send");}
+        count = send(cdata->csock, buf4, strlen(buf4), 0);
+        if (count != (int) strlen(buf4)){ logexit("send");}
     }
 }
 
@@ -187,16 +193,16 @@ void unsubscribe(std::string& cpyStr,
         char buf3[BUFSZ];
         memset(buf3, 0, BUFSZ);
         sprintf(buf3, "unsubscribed %s\n", cpyStr.c_str());
-        count = send(cdata->csock, buf3, strlen(buf3)+1, 0);
-        if (count != (int) strlen(buf3)+1){ logexit("send");}
+        count = send(cdata->csock, buf3, strlen(buf3), 0);
+        if (count != (int) strlen(buf3)){ logexit("send");}
     }else{
         // Manda aviso que já era inscrito
         std::cout << "[uns] " << caddrstr << " not subscribed to " << tag << " (no action needed)" << std::endl;
         char buf4[BUFSZ];
         memset(buf4, 0, BUFSZ);
         sprintf(buf4, "not subscribed %s\n", cpyStr.c_str());
-        count = send(cdata->csock, buf4, strlen(buf4)+1, 0);
-        if (count != (int) strlen(buf4)+1){ logexit("send");}
+        count = send(cdata->csock, buf4, strlen(buf4), 0);
+        if (count != (int) strlen(buf4)){ logexit("send");}
     }
 }
 
@@ -241,8 +247,8 @@ void notify(std::string msg,
         // Manda a mensagem para o cliente em questão
         char buf2[BUFSZ];
         sprintf(buf2, "\n%s\n", msg.c_str());
-        count = send(sock, buf2, strlen(buf2)+1, 0);
-        if (count != (int) strlen(buf2)+1){ logexit("send");}
+        count = send(sock, buf2, strlen(buf2), 0);
+        if (count != (int) strlen(buf2)){ logexit("send");}
         std::cout << "[not] sent message to " << it->first << std::endl;
 
     }
@@ -307,12 +313,12 @@ void processarMsg(std::string& recStr,
             notify(cpyStr, caddrstr, count, ms, mip);
 
             // Manda uma confirmação de recebimento para o cliente
-            char buf2[BUFSZ];
-            sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
-            count = send(cdata->csock, buf2, strlen(buf2)+1, 0);
-            if (count != (int) strlen(buf2)+1){
-                logexit("send");
-            }
+            // char buf2[BUFSZ];
+            // sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
+            // count = send(cdata->csock, buf2, strlen(buf2), 0);
+            // if (count != (int) strlen(buf2)){
+            //     logexit("send");
+            // }
 
             oldfind = find;
             find = findNewLine(recStr,find+1);
@@ -356,30 +362,30 @@ void* client_thread(void* arguments){
     pthread_exit(EXIT_SUCCESS);
 }
 
-void* ping_handler(void* data){
-    std::vector<int>* cSockS = (std::vector<int>*) data;
-    while(1){
-        sleep(10);
-        printf("[log] Ping...\n");
-        for(int sock: *cSockS){
-            char buf[BUFSZ];
-            memset(buf, 0, BUFSZ);
-            sprintf(buf, "\nPing!\n");
-            size_t count = send(sock, buf, strlen(buf)+1, 0);
-            if (count != strlen(buf)+1){
-                logexit("send");
-            }
-        }
-    }
-}
+// void* ping_handler(void* data){
+//     std::vector<int>* cSockS = (std::vector<int>*) data;
+//     while(1){
+//         sleep(10);
+//         printf("[log] Ping...\n");
+//         for(int sock: *cSockS){
+//             char buf[BUFSZ];
+//             memset(buf, 0, BUFSZ);
+//             sprintf(buf, "\nPing!\n");
+//             size_t count = send(sock, buf, strlen(buf), 0);
+//             if (count != strlen(buf)){
+//                 logexit("send");
+//             }
+//         }
+//     }
+// }
 
 int main(int argc, char* argv[]){
     // Processa os argumentos passados
-    if (argc < 3){
+    if (argc < 2){
         usage(argc, argv);
     }
     struct sockaddr_storage storage;
-    if (server_sockaddr_init(argv[1], argv[2], &storage) != 0){
+    if (server_sockaddr_init("v4", argv[1], &storage) != 0){
         usage(argc, argv);
     }
     
@@ -403,9 +409,9 @@ int main(int argc, char* argv[]){
     std::vector<int> cSockS;
     MapaTag ms;     // Mapa que guarda as tags dos clientes
     MapaIpPorta mip;  // Mapa que relaciona os soquetes e as portas dos clientes
-    printf("[log] Creating ping_thread\n");
-    pthread_t ping_thread;
-    pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
+    // printf("[log] Creating ping_thread\n");
+    // pthread_t ping_thread;
+    // pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
     
     // Loop principal
     while(1){
