@@ -144,7 +144,7 @@ void strtolist(std::string& msg, std::list<std::string>& out){
 Dada uma mensagem (string), retorna o conjunto de tags utilizadas (como é um 
 conjunto, não há tags repetidas no retorno)
 */
-void usedtags(std::string& msg, std::set<std::string>& out){
+void usedTags(std::string& msg, std::set<std::string>& out){
     std::list<std::string> tags;
     strtolist(msg, tags);
     out.clear();
@@ -174,7 +174,7 @@ função 'addrtostr').
 Retorna 'true' se o usuário ainda não seguia tal tag (houve alteração no BD). 
 Retorna 'false' se o usuário já seguia a tag (não houve alteração). 
 */
-bool subscribeToTag(Mapa& mp, std::string caddrtstr, std::string tag){
+bool subscribeToTag(MapaTag& mp, std::string caddrtstr, std::string tag){
     // Procura cadastro desse usuário
     auto it = mp.find(caddrtstr);
     
@@ -182,7 +182,7 @@ bool subscribeToTag(Mapa& mp, std::string caddrtstr, std::string tag){
         // Usuário não está presente, temos que criar o cadastro
         std::vector<std::string> tags_subscribed;
         tags_subscribed.push_back(tag);
-        Par p = std::make_pair<std::string&, std::vector<std::string>&>(caddrtstr, tags_subscribed);
+        ParTag p = std::make_pair<std::string&, std::vector<std::string>&>(caddrtstr, tags_subscribed);
         mp.insert(p);
         return true;
     }else{
@@ -214,7 +214,7 @@ O usuário deve ser identificado com seu IP e sua porta (output da função
 Retorna 'true' se o usuário seguia tal tag (houve alteração no BD). 
 Retorna 'false' se o usuário não seguia a tag (não houve alteração). 
 */
-bool unsubscribeFromTag(Mapa& mp, std::string caddrtstr, std::string tag){
+bool unsubscribeFromTag(MapaTag& mp, std::string caddrtstr, std::string tag){
     // Procura cadastro desse usuário
     auto it = mp.find(caddrtstr);
     
@@ -250,7 +250,6 @@ void removeNewLine(char* str){
     }
 }
 
-
 bool validString(std::string str){
     char valids[181]  = "    ABCDEFGHIJKLMNOPQRSTUVWXYZ \
                      abcdefghijklmnopqrstuvwxyz \
@@ -272,3 +271,29 @@ int findNewLine(std::string str, int pos){
     std::string newStr = str;
     return newStr.find('\n', pos);
 }
+
+/*
+Encontra o conjunto de clientes (string IP e porta, saída de 'addrtostr') para 
+os quais devemos enviar uma mensagem, dada a tag fornecida. Em outras palavras
+encontra o conjunto de clientes que é inscrito numa tag.
+*/
+void notifySet(std::set<std::string>& out, MapaTag& mp, std::string tag){
+    // Para cada cliente
+    for(auto pair: mp){
+        // Procura tag dentre as inscritas pelo cliente
+        auto it = pair.second.begin();
+        for(; it != pair.second.end(); it++){
+            if (*it == tag){
+                break;
+            }
+        }
+
+        if (it == pair.second.end()){
+            // Cliente não segue a tag, nada a fazer
+        }else{
+            // Cliente segue a tag, adicionar ao conjunto de saída
+            out.insert(pair.first);
+        }
+    }
+}
+

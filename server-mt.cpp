@@ -26,22 +26,43 @@ struct client_data{
 struct cl_thd_args{
     struct client_data* cdata;
     std::vector<int>* cSockS;
-    Mapa* mp;
+    MapaTag* ms;
+    MapaIpPorta* mip;
 };
 
 /*
 Remove o soquete do cliente fornecido do vector de soquetes de clientes
 */
-void removeClient(std::vector<int>& cSockS, int cl){
-    // Procura o soquete do cliente fornecido
+void removeClient(MapaTag& ms, MapaIpPorta& mip, std::vector<int>& cSockS, int cl){
+    // Remove o cliente do vector de soquetes
     for(auto it = cSockS.begin(); it != cSockS.end(); it++){
         if (*it == cl){
             cSockS.erase(it);
             break;
         }
     }
-}
+    std::cout << "[log] Removed socket " << cl << std::endl;
 
+    // Remove o cliente do mapa de IP-porta
+    auto it = mip.begin();
+    for(; it != mip.end(); it++){
+        if (it->second == cl){
+            break;
+        }
+    }
+    if (it != mip.end()){
+        std::string caddr = it->first;
+        mip.erase(it);
+        std::cout << "[log] Removed client " << caddr << std::endl;
+
+        // Remove o cliente do mapa de tags
+        ms.erase(caddr);
+        std::cout << "[log] Removed tags from client " << caddr << std::endl;
+    }
+    std::cout << "[log] Removed client sucessfuly " << std::endl;
+
+    
+}
 
 /*
 Função auxiliar de 'client_thread' que recebe mensagem do cliente (cujos dados 
@@ -57,7 +78,9 @@ void receberMsg(std::string& recStr,
                 char caddrstr[],
                 std::vector<int>* cSockS, 
                 bool& connected,
-                int& count)
+                int& count,
+                MapaTag* ms,
+                MapaIpPorta* mip)
 {
     // Buffer do que foi recebido
     char rec[BUFSZ];
@@ -73,7 +96,7 @@ void receberMsg(std::string& recStr,
             // Sem mensagens a receber: cliente desligou
             printf("[log] %s closed connection\n", caddrstr);
             connected = false;
-            removeClient(*cSockS, cdata->csock);
+            removeClient(*ms, *mip, *cSockS, cdata->csock);
             break;
         }else if (count < 0){
             // Erro no recv
@@ -84,7 +107,7 @@ void receberMsg(std::string& recStr,
         if (!validString(rec)){
             printf("[log] Invalid message from %s, closing connection\n", caddrstr);
             connected = false;
-            removeClient(*cSockS, cdata->csock);
+            removeClient(*ms, *mip, *cSockS, cdata->csock);
             break;
         }
 
@@ -113,7 +136,7 @@ void subscribe(std::string& msgInsc,
                struct client_data* cdata, 
                char caddrstr[],
                int& count,
-               Mapa* mp)
+               MapaTag* mp)
 {
     std::cout << "[sub] " << caddrstr << " requested to subscribe" << std::endl;
     std::string tag = msgInsc.substr(1);
@@ -150,7 +173,7 @@ void unsubscribe(std::string& cpyStr,
                  struct client_data* cdata, 
                  char caddrstr[],
                  int& count,
-                 Mapa* mp)
+                 MapaTag* mp)
 {
     std::cout << "[uns] " << caddrstr << " requested to unsubscribe" << std::endl;
     std::string tag = cpyStr.substr(1);
@@ -192,7 +215,8 @@ void processarMsg(std::string& recStr,
                   std::vector<int>* cSockS, 
                   bool& connected,
                   int& count,
-                  Mapa* mp)
+                  MapaTag* ms,
+                  MapaIpPorta* mip)
 {
     int oldfind = -1;
     int find = findNewLine(recStr.c_str());
@@ -212,20 +236,58 @@ void processarMsg(std::string& recStr,
                 // Comando para fim da execução do cliente, podemos encerrar a 
                 // conexão dele no lado do servidor também
                 printf("[log] %s requested to end connection\n", caddrstr);
-                removeClient(*cSockS, cdata->csock);
+                removeClient(*ms, *mip, *cSockS, cdata->csock);
                 connected = false;
                 break;
             }
 
             // Se for mensagem de (un)subscribe, fazer as alterações no mapa
             if (cpyStr[0] == '+'){
-                subscribe(cpyStr, cdata, caddrstr, count, mp);
+                subscribe(cpyStr, cdata, caddrstr, count, ms);
                 break;
             }else if(cpyStr[0] == '-'){
-                unsubscribe(cpyStr, cdata, caddrstr, count, mp);
+                unsubscribe(cpyStr, cdata, caddrstr, count, ms);
                 break;
             }
+            
+            // Notificar os seguidores das tags utilizadas
+            std::set<std::string> tags;
+            usedTags(cpyStr, tags);     // Acha as tags utilizadas
 
+            std::set<std::string> subs;
+            // Para cada tag utilizada
+            for(std::string tag : tags){
+                // Acha os seguidores da tag
+                std::set<std::string> subsPartial;
+                notifySet(subsPartial, *ms, tag);  
+                subs = getUnion(subs, subsPartial);
+            }
+
+            // Remover quem enviou a mensagem, se for o caso
+            auto it = subs.find(caddrstr);
+            if (it != subs.end()){
+                subs.erase(it);
+            }
+
+            // Notifica cada cliente no conjunto obtido
+            for(std::string cInfo : subs){
+                auto it = mip->find(cInfo);
+                if (it == mip->end()){ logexit("notify");}
+                int sock = it->second;
+
+                // Manda a mensagem para o cliente em questão
+                char buf2[BUFSZ];
+                sprintf(buf2, "\n%s\n", cpyStr.c_str());
+                count = send(sock, buf2, strlen(buf2)+1, 0);
+                if (count != (int) strlen(buf2)+1){ logexit("send");}
+                std::cout << "[not] sent message to " << it->first << std::endl;
+
+            }
+            // TODO: notify subscribers
+            // conjunto de tags OK (usedTags)
+            // dado conjunto de tags, retorna conjunto de usuarios para enviar
+            // associar IP-porta a soquete (mapa int -> string)
+            // remove quem enviou a mensagem, se tiver
 
             // Manda uma confirmação de recebimento para o cliente
             char buf2[BUFSZ];
@@ -251,7 +313,8 @@ void* client_thread(void* arguments){
     struct client_data* cdata = (struct client_data*) args->cdata;
     struct sockaddr* caddr = (struct sockaddr*)(&cdata->storage);
     std::vector<int>* cSockS = (std::vector<int>*) args->cSockS;
-    Mapa* mp = args->mp;
+    MapaTag* ms = args->ms;
+    MapaIpPorta* mip = args->mip;
 
     // Imprime que a conexão teve sucesso
     char caddrstr[BUFSZ];
@@ -263,15 +326,15 @@ void* client_thread(void* arguments){
         // Receber a mensagem do cliente até encontrar o newline
         int count = 0;
         std::string recStr = "";
-        receberMsg(recStr, cdata, caddrstr, cSockS, connected, count);
+        receberMsg(recStr, cdata, caddrstr, cSockS, connected, count, ms, mip);
 
         if(!connected){ break;}
         std::cout << "[log] Message received" << std::endl;
         
         // Processa a mensagem (separa mensagens múltiplas)
-        processarMsg(recStr, cdata, caddrstr, cSockS, connected, count, mp);
+        processarMsg(recStr, cdata, caddrstr, cSockS, connected, count, ms, mip);
     }
-    removeClient(*cSockS, cdata->csock);
+    removeClient(*ms, *mip, *cSockS, cdata->csock);
     close(cdata->csock);
     pthread_exit(EXIT_SUCCESS);
 }
@@ -321,7 +384,8 @@ int main(int argc, char* argv[]){
     printf("[log] Bound to %s, waiting connections...\n", addrstr);
 
     std::vector<int> cSockS;
-    Mapa mp;     // Mapa que guarda as tags dos clientes
+    MapaTag ms;     // Mapa que guarda as tags dos clientes
+    MapaIpPorta mip;  // Mapa que relaciona os soquetes e as portas dos clientes
     printf("[log] Creating ping_thread\n");
     pthread_t ping_thread;
     pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
@@ -335,6 +399,12 @@ int main(int argc, char* argv[]){
         // Aceita a conexão do cliente
         int csock = accept(s, caddr, &caddrlen);
         if (csock == -1){ logexit("accept");}
+        char caddrstr[BUFSZ];
+        addrtostr(caddr, caddrstr, BUFSZ);
+
+        // Coloca o cliente no mapa de soquetes
+        ParIpPorta p1 = std::make_pair(std::string(caddrstr), csock);
+        mip.insert(p1);
 
         // Argumentos para a thread do cliente
         struct cl_thd_args *args = (struct cl_thd_args*) malloc(sizeof(*args));
@@ -344,7 +414,8 @@ int main(int argc, char* argv[]){
         args->cdata->csock = csock;
         memcpy(&(args->cdata->storage), &cstorage, sizeof(cstorage));
         args->cSockS = &cSockS;
-        args->mp = &mp;
+        args->ms = &ms;
+        args->mip = &mip;
 
         // Conecta o cliente via uma thread
         pthread_t tid;

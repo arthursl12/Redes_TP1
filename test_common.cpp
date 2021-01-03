@@ -51,7 +51,7 @@ TEST_CASE("usedTags"){
     std::set<std::string> l1;
     l1.insert("#dota");
     std::set<std::string> lr;
-    usedtags(msg, lr);
+    usedTags(msg, lr);
     CHECK(lr == l1);
 
     msg = "perdeu eh culpa do suporte #dota #overwatch";
@@ -59,7 +59,7 @@ TEST_CASE("usedTags"){
     l1.insert("#dota");
     l1.insert("#overwatch");
     lr.clear();
-    usedtags(msg, lr);
+    usedTags(msg, lr);
     CHECK(lr == l1);
 
     msg = "perdeu #dota eh culpa do suporte #dota #overwatch";
@@ -67,20 +67,20 @@ TEST_CASE("usedTags"){
     l1.insert("#dota");
     l1.insert("#overwatch");
     lr.clear();
-    usedtags(msg, lr);
+    usedTags(msg, lr);
     CHECK(lr == l1);
     CHECK(lr.size() == l1.size());
 
     msg = "perdeu eh culpa do suporte #dota#overwatch";
     l1.clear();
     lr.clear();
-    usedtags(msg, lr);
+    usedTags(msg, lr);
     CHECK(lr == l1);
     CHECK(lr.empty() == true);
 }
 
 TEST_CASE("Mapa: subscribeToTag"){
-    Mapa mp;
+    MapaTag mp;
     std::string ip1 = "::1 2001";
 
     CHECK(subscribeToTag(mp, ip1, "#dota"));
@@ -98,7 +98,7 @@ TEST_CASE("Mapa: subscribeToTag"){
 }
 
 TEST_CASE("Mapa: subscribeToTag - diferentes tipos IPs"){
-    Mapa mp;
+    MapaTag mp;
     std::string ip1 = "::1 2001";
     std::string ip2 = "::1 2002";
     std::string ip3 = "0.0.0.0 2001";
@@ -151,7 +151,7 @@ TEST_CASE("Mapa: subscribeToTag - diferentes tipos IPs"){
 }
 
 TEST_CASE("Mapa: unsubscribeFromTag"){
-    Mapa mp;
+    MapaTag mp;
     std::string ip1 = "::1 2001";
 
     CHECK(mp.size() == 0);
@@ -298,4 +298,63 @@ TEST_CASE("Multiple Messages one package"){
         }
     }
     
+}
+
+TEST_CASE("NotifySet"){
+    MapaTag mp;
+    std::string ip1 = "::1 2001";
+    std::string ip2 = "::1 2002";
+    std::string ip3 = "0.0.0.0 2001";
+
+    subscribeToTag(mp, ip1, "#overwatch");
+    subscribeToTag(mp, ip1, "#lol");
+    subscribeToTag(mp, ip1, "#dota");
+    subscribeToTag(mp, ip1, "#TBT");
+
+    subscribeToTag(mp, ip2, "#TBT");
+
+    subscribeToTag(mp, ip3, "#TBT");
+    subscribeToTag(mp, ip3, "#overwatch");
+
+    std::set<std::string> out;
+    notifySet(out, mp, "#TBT");
+    CHECK(out.size() == 3);
+    CHECK(out.find(ip1) != out.end());
+    CHECK(out.find(ip2) != out.end());
+    CHECK(out.find(ip3) != out.end());
+
+    out.clear();
+    notifySet(out, mp, "#overwatch");
+    CHECK(out.size() == 2);
+    CHECK(out.find(ip1) != out.end());
+    CHECK(out.find(ip2) == out.end());
+    CHECK(out.find(ip3) != out.end());
+
+    out.clear();
+    notifySet(out, mp, "#lol");
+    CHECK(out.size() == 1);
+    CHECK(out.find(ip1) != out.end());
+    CHECK(out.find(ip2) == out.end());
+    CHECK(out.find(ip3) == out.end());
+
+    out.clear();
+    notifySet(out, mp, "#dota");
+    CHECK(out.size() == 1);
+    CHECK(out.find(ip1) != out.end());
+    CHECK(out.find(ip2) == out.end());
+    CHECK(out.find(ip3) == out.end());
+
+    out.clear();
+    notifySet(out, mp, "#ksp");
+    CHECK(out.size() == 0);
+
+
+
+
+
+
+
+
+
+
 }
