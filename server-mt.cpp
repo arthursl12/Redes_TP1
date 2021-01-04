@@ -10,8 +10,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#define BUFSZ 1024
-
 // void usage(int argc, char* argv[]){
 //     printf("usage: %s <v4|v6> <server_port>\n", argv[0]);
 //     printf("example: %s v4 51511\n", argv[0]);
@@ -123,6 +121,15 @@ void receberMsg(std::string& recStr,
         recStr += rec;
         // std::cout << "[log] Partial string " << recStr << std::endl;
         total += count;
+        std::cout << "[log] Total message bytes: " << total << std::endl;
+        if (total > MSGSZ){
+            std::cout << "[log] Message from " << caddrstr;
+            std::cout << " exceeeds allowed size, closing connection";
+            std::cout << std::endl;
+            connected = false;
+            removeClient(*ms, *mip, *cSockS, cdata->csock);
+            break;
+        }
 
         // Procura newline no que foi recebido
         int find = findNewLine(rec);

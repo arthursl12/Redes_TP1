@@ -18,8 +18,6 @@ void usage(int argc, char *argv[]){
     exit(EXIT_FAILURE);
 }
 
-#define BUFSZ 1024
-
 // Cliente manda mensagem em pedaços, usada apenas para testes
 void* double_send_msg_handler(void* data) {
     int s = *((int *) data);
@@ -102,10 +100,17 @@ void* recv_msg_handler(void* data) {
             std::cout << "message2> ";
             fflush(stdout);
         }else if (count == 0){
+            std::cout << std::endl;
             std::cout << "[log] Servidor encerrou a conexão." << std::endl;
             close(s);
             exit(EXIT_FAILURE);
             break;
+        }else if (total > MSGSZ){
+            std::cout << std::endl;
+            std::cout << "[log] Servidor mandou uma mensagem muito grande.";
+            std::cout << std::endl;
+            close(s);
+            exit(EXIT_FAILURE);
         }else{
             // count == -1
             logexit("recv (client)");

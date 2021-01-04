@@ -15,6 +15,8 @@ typedef std::pair<std::string, std::vector<std::string>> ParTag;
 typedef std::map<std::string, int> MapaIpPorta;
 typedef std::pair<std::string, int> ParIpPorta;
 
+#define BUFSZ 1024
+#define MSGSZ 500
 
 
 void logexit(const char *msg);
