@@ -1,5 +1,6 @@
 subscribed +dota
+subscribed +dia
+Grande #dia para fazer uma partida de #dota
 unsubscribed -dota
-subscribed +DOTA
 Realmente, excelente #dia para fazer uma partida de #DOTA
 Definitivamente, um #dia para #DOTA
