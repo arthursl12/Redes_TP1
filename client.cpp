@@ -28,7 +28,7 @@ void* double_send_msg_handler(void* data) {
     memset(buf, 0, BUFSZ);
 
     // Entrada da mensagem
-    printf("message1> ");
+    std::cout << "message1> ";
     fflush(stdout);
     fgets(buf, BUFSZ-1, stdin);
 
@@ -66,7 +66,7 @@ void* send_msg_handler(void* data) {
     memset(buf, 0, BUFSZ);
 
     // Entrada da mensagem
-    printf("message1> ");
+    std::cout << "message1> ";
     fflush(stdout);
     fgets(buf, BUFSZ-1, stdin);
 
@@ -76,7 +76,7 @@ void* send_msg_handler(void* data) {
         if (count != strlen(buf)){ logexit("send");}
 
         // Entrada da mensagem
-        printf("message3> ");
+        std::cout << "message3> ";
         fflush(stdout);
         memset(buf, 0, BUFSZ);
         fgets(buf, BUFSZ-1, stdin);
@@ -99,10 +99,10 @@ void* recv_msg_handler(void* data) {
             // puts(buf);
 
             // Imprime texto de input novamente
-            printf("message2> ");
+            std::cout << "message2> ";
             fflush(stdout);
         }else if (count == 0){
-            printf("[log] Servidor encerrou a conexão.\n");
+            std::cout << "[log] Servidor encerrou a conexão." << std::endl;
             close(s);
             exit(EXIT_FAILURE);
             break;
@@ -113,7 +113,7 @@ void* recv_msg_handler(void* data) {
         total += count;
         memset(buf, 0, BUFSZ);
     }
-    printf("[log] Recebeu um total de %d bytes\n", total);
+    std::cout << "[log] Recebeu um total de " << total << " bytes" << std::endl;
     pthread_exit(EXIT_SUCCESS);
 }
 
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]){
     if (connect(s, addr, sizeof(storage)) != 0){ logexit("connect");}
     char addrstr[BUFSZ];       
     addrtostr(addr, addrstr, BUFSZ);        // Imprimir o IP do servidor
-    printf("Sucessfully connected to %s\n", addrstr);
+    std::cout << "Sucessfully connected to " << addrstr << std::endl;
 
     pthread_t recv_msg_thread;
     int *arg = (int*) malloc(sizeof(*arg));

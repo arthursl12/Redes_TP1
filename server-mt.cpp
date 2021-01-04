@@ -100,7 +100,8 @@ void receberMsg(std::string& recStr,
 
         if (count == 0){
             // Sem mensagens a receber: cliente desligou
-            printf("[log] %s closed connection\n", caddrstr);
+            std::cout << "[log] " << caddrstr << " closed connection";
+            std::cout << std::endl;
             connected = false;
             removeClient(*ms, *mip, *cSockS, cdata->csock);
             break;
@@ -111,7 +112,8 @@ void receberMsg(std::string& recStr,
         
         // Verifica se todos os caracteres da mensagem são válidos
         if (!validString(rec)){
-            printf("[log] Invalid message from %s, closing connection\n", caddrstr);
+            std::cout << "[log] Invalid message from " << caddrstr;
+            std::cout << " , closing connection" << std::endl;
             connected = false;
             removeClient(*ms, *mip, *cSockS, cdata->csock);
             break;
@@ -151,7 +153,8 @@ void subscribe(std::string& msgInsc,
     bool newSub = subscribeToTag(*mp, caddrstr, tag);
     if (newSub){
         // Manda confirmação de inscrição
-        std::cout << "[sub] " << caddrstr << " sucessfully subscribed to " << tag << std::endl;
+        std::cout << "[sub] " << caddrstr << " sucessfully subscribed to ";
+        std::cout << tag << std::endl;
 
         char buf3[BUFSZ];
         memset(buf3, 0, BUFSZ);
@@ -181,7 +184,8 @@ void unsubscribe(std::string& cpyStr,
                  int& count,
                  MapaTag* mp)
 {
-    std::cout << "[uns] " << caddrstr << " requested to unsubscribe" << std::endl;
+    std::cout << "[uns] " << caddrstr << " requested to unsubscribe";
+    std::cout << std::endl;
     std::string tag = cpyStr.substr(1);
     tag = "#" + tag;
     
@@ -281,23 +285,13 @@ void processarMsg(std::string& recStr,
             std::string cpyStr = bufStr.substr(oldfind+1,find-oldfind-1);
             
             // Log mensagem recebida
-            printf("[msg] %s, %d bytes: \"%s\"\n", \
-                                    caddrstr, (int)count, cpyStr.c_str());
-
-
-            // Verifica se a mensagem é o comando de fim da execução do cliente
-            if (strcmp(cpyStr.c_str(),"##quit") == 0){
-                // Comando para fim da execução do cliente, podemos encerrar a 
-                // conexão dele no lado do servidor também
-                printf("[log] %s requested to end connection\n", caddrstr);
-                removeClient(*ms, *mip, *cSockS, cdata->csock);
-                connected = false;
-                break;
-            }
+            std::cout << "[msg] " << caddrstr << ", " << count << " bytes: ";
+            std::cout << "\"" << cpyStr << "\"" << std::endl;
 
             // Verifica se a mensagem é o comando de fim da execução do servidor
             if (strcmp(cpyStr.c_str(),"##kill") == 0){
-                printf("[log] %s requested to end server\n", caddrstr);
+                std::cout << "[log] " << caddrstr << " requested to end server";
+                std::cout << std::endl;
                 exit(EXIT_SUCCESS);
             }
 
@@ -334,7 +328,7 @@ void* client_thread(void* arguments){
     // Imprime que a conexão teve sucesso
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
-    printf("[log] Connection from %s\n", caddrstr);
+    std::cout << "[log] Connection from " << caddrstr << std::endl;
 
     bool connected = true;
     while(connected){
@@ -380,7 +374,8 @@ int main(int argc, char* argv[]){
     if (listen(s, 10) != 0){ logexit("listen");}
     char addrstr[BUFSZ];
     addrtostr(addr, addrstr, BUFSZ);
-    printf("[log] Bound to %s, waiting connections...\n", addrstr);
+    std::cout << "[log] Bound to " << addrstr << " , waiting connections...";
+    std::cout << std::endl;
 
     std::vector<int> cSockS;    // Vector que guarda os soquetes conectados
     MapaTag ms;       // Mapa que guarda as tags dos clientes
