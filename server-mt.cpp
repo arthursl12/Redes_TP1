@@ -246,7 +246,7 @@ void notify(std::string msg,
 
         // Manda a mensagem para o cliente em questão
         char buf2[BUFSZ];
-        sprintf(buf2, "\n%s\n", msg.c_str());
+        sprintf(buf2, "%s\n", msg.c_str());
         count = send(sock, buf2, strlen(buf2), 0);
         if (count != (int) strlen(buf2)){ logexit("send");}
         std::cout << "[not] sent message to " << it->first << std::endl;
@@ -312,14 +312,6 @@ void processarMsg(std::string& recStr,
             
             notify(cpyStr, caddrstr, count, ms, mip);
 
-            // Manda uma confirmação de recebimento para o cliente
-            // char buf2[BUFSZ];
-            // sprintf(buf2, "Message sent sucessfully, %.900s\n", caddrstr);
-            // count = send(cdata->csock, buf2, strlen(buf2), 0);
-            // if (count != (int) strlen(buf2)){
-            //     logexit("send");
-            // }
-
             oldfind = find;
             find = findNewLine(recStr,find+1);
             // Processa a mensagem seguinte se houver mais de um '\n'
@@ -362,22 +354,6 @@ void* client_thread(void* arguments){
     pthread_exit(EXIT_SUCCESS);
 }
 
-// void* ping_handler(void* data){
-//     std::vector<int>* cSockS = (std::vector<int>*) data;
-//     while(1){
-//         sleep(10);
-//         printf("[log] Ping...\n");
-//         for(int sock: *cSockS){
-//             char buf[BUFSZ];
-//             memset(buf, 0, BUFSZ);
-//             sprintf(buf, "\nPing!\n");
-//             size_t count = send(sock, buf, strlen(buf), 0);
-//             if (count != strlen(buf)){
-//                 logexit("send");
-//             }
-//         }
-//     }
-// }
 
 int main(int argc, char* argv[]){
     // Processa os argumentos passados
@@ -406,13 +382,10 @@ int main(int argc, char* argv[]){
     addrtostr(addr, addrstr, BUFSZ);
     printf("[log] Bound to %s, waiting connections...\n", addrstr);
 
-    std::vector<int> cSockS;
-    MapaTag ms;     // Mapa que guarda as tags dos clientes
+    std::vector<int> cSockS;    // Vector que guarda os soquetes conectados
+    MapaTag ms;       // Mapa que guarda as tags dos clientes
     MapaIpPorta mip;  // Mapa que relaciona os soquetes e as portas dos clientes
-    // printf("[log] Creating ping_thread\n");
-    // pthread_t ping_thread;
-    // pthread_create(&ping_thread, NULL, ping_handler, &cSockS);
-    
+
     // Loop principal
     while(1){
         struct sockaddr_storage cstorage;

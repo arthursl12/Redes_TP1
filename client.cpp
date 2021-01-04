@@ -53,15 +53,6 @@ void* double_send_msg_handler(void* data) {
             int count = send(s, bufCpy.c_str(), size, 0);
             if (count != size){ logexit("send");}
         }
-        
-        // Copiar o buffer para o teste abaixo
-        char cpybuf[BUFSZ];
-        strcpy(cpybuf,buf);
-        cpybuf[strlen(cpybuf)-1] = '\0';
-        if (strcmp(cpybuf,"##quit") == 0){
-            // Comando para fechar o cliente
-            break;
-        }
 
         fgets(buf, BUFSZ-1, stdin);
     }
@@ -84,15 +75,9 @@ void* send_msg_handler(void* data) {
         size_t count = send(s, buf, strlen(buf), 0);
         if (count != strlen(buf)){ logexit("send");}
 
-        // Copiar o buffer para o teste abaixo
-        char cpybuf[BUFSZ];
-        memset(cpybuf, 0, BUFSZ);
-        strcpy(cpybuf,buf);
-        cpybuf[strlen(cpybuf)-1] = '\0';
-        if (strcmp(cpybuf,"##quit") == 0){
-            // Comando para fechar o cliente
-            break;
-        }
+        // Entrada da mensagem
+        printf("message3> ");
+        fflush(stdout);
         memset(buf, 0, BUFSZ);
         fgets(buf, BUFSZ-1, stdin);
     }
@@ -110,9 +95,8 @@ void* recv_msg_handler(void* data) {
         // puts("");
         if (count > 0) {
             // Imprime mensagem recebida do servidor
-            std::cout << buf;
+            std::cout << std::endl << buf;
             // puts(buf);
-            printf("received %i bytes\n", count);
 
             // Imprime texto de input novamente
             printf("message2> ");
