@@ -18,46 +18,6 @@ void usage(int argc, char *argv[]){
     exit(EXIT_FAILURE);
 }
 
-// Cliente manda mensagem em pedaços, usada apenas para testes
-void* double_send_msg_handler(void* data) {
-    int s = *((int *) data);
-    char buf[BUFSZ];
-    std::string bufStr;
-    memset(buf, 0, BUFSZ);
-
-    // Entrada da mensagem
-    std::cout << "message1> ";
-    fflush(stdout);
-    fgets(buf, BUFSZ-1, stdin);
-
-    while(1) {
-        std::string bufCpy1 = buf;
-
-        int oldSize = 0;
-        for (int i = 0; i < 2; i++){
-            // Envia a mensagem em 2 packets
-            std::string bufCpy = buf;
-            int size = bufCpy.size()/2;
-            bufCpy = bufCpy.substr(oldSize, size);
-            int count = send(s, bufCpy.c_str(), size, 0);
-            if (count != size){ logexit("send");}
-            oldSize = size;
-        }
-        std::string bufCpy = buf;
-        if (bufCpy.size() % 2 == 1){
-            // Manda o último caractere
-            bufCpy = bufCpy.at(bufCpy.size()-1);
-            int size = bufCpy.size();
-            int count = send(s, bufCpy.c_str(), size, 0);
-            if (count != size){ logexit("send");}
-        }
-
-        fgets(buf, BUFSZ-1, stdin);
-    }
-    pthread_exit(EXIT_SUCCESS);
-}
-
-
 void* send_msg_handler(void* data) {
     int s = *((int *) data);
     char buf[BUFSZ];
@@ -158,13 +118,6 @@ int main(int argc, char* argv[]){
     // Esperar a thread de enviar mensagem terminar, para que o programa espere
     // que usuário digite
     (void)pthread_join(send_msg_thread, NULL); 
-
-    // pthread_create(&send_msg_thread, NULL, double_send_msg_handler, arg);
-    // // Esperar a thread de enviar mensagem terminar, para que o programa espere
-    // // que usuário digite
-    // (void)pthread_join(send_msg_thread, NULL); 
-
-
 
     close(s);
     exit(EXIT_SUCCESS);
