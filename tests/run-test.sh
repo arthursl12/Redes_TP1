@@ -5,8 +5,8 @@ N=$1
 
 # Leave server window open during debug (close with C-b :kill-pane)
 # tmux set-window-option remain-on-exit on
-tmux split-pane -v -c $(pwd)/../ ./servidor 51511
-../client.py --script test$N-script.txt
+tmux split-pane -v -c $(pwd) ./servidor 51511
+./client.py --script test$N-script.txt
 
 K=1
 while [[ -e test$N-output$K.txt ]] ; do
@@ -18,4 +18,4 @@ while [[ -e test$N-output$K.txt ]] ; do
 done
 
 echo "test$N passed"
-rm -rf ../client.log output*.txt ./*.sh.swp client.log
+rm -rf client.log output*.txt
